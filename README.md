@@ -45,7 +45,8 @@ OpenTagViewer. It's great.
 - **Full history**: every report Apple returns is stored, deduplicated, and kept indefinitely.
   Apple only keeps about 7 days, so anything older exists only here
 - **History view** per item or for all items at once, by preset or custom date range, with
-  a day-by-day list of sightings. Click a dot on the map to find it in the list
+  a day-by-day list of sightings. Arrows show the direction of travel; click a dot to find it
+  in the list, or a line to see how long that stretch took
 - **Clean history**: a report's position is the position of the stranger's iPhone that heard
   your item, so some land far off. Reports that disagree with the ones around them are hidden
   (one click shows them again), and time spent in one place collapses into a single

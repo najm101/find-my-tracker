@@ -35,8 +35,11 @@ type Props = {
   points: Point[]
   /** Collapse these into one row each. Pass none to list every report. */
   stays: Stay[]
-  /** The selected row. A new object each time something is picked, even the same row again. */
-  selection?: { key: string } | null
+  /**
+   * The selected row (scrolled into view), plus `also` rows highlighted with it. A new object
+   * each time something is picked, even the same row again.
+   */
+  selection?: { key: string; also?: string[] } | null
   onSelect: (target: TimelineTarget) => void
 }
 
@@ -101,19 +104,13 @@ export function DayTimeline({ points, stays, selection, onSelect }: Props) {
                 {e.kind === "stay" ? (
                   <StayRow
                     stay={e.stay}
-                    selection={
-                      selection?.key === `stay-${e.stay.arrived_at}`
-                        ? selection
-                        : null
-                    }
+                    {...rowSelection(selection, `stay-${e.stay.arrived_at}`)}
                     onSelect={onSelect}
                   />
                 ) : (
                   <PointRow
                     point={e.point}
-                    selection={
-                      selection?.key === e.point.observed_at ? selection : null
-                    }
+                    {...rowSelection(selection, e.point.observed_at)}
                     onSelect={onSelect}
                   />
                 )}
@@ -124,6 +121,17 @@ export function DayTimeline({ points, stays, selection, onSelect }: Props) {
       ))}
     </div>
   )
+}
+
+function rowSelection(
+  selection: Props["selection"],
+  key: string
+): { selection: object | null; highlighted: boolean } {
+  if (selection?.key === key) return { selection, highlighted: true }
+  return {
+    selection: null,
+    highlighted: selection?.also?.includes(key) ?? false,
+  }
 }
 
 /** A ref that scrolls its row into view each time it is picked (e.g. on the map). */
@@ -142,13 +150,15 @@ const ROW =
 function StayRow({
   stay,
   selection,
+  highlighted,
   onSelect,
 }: {
   stay: Stay
   selection: object | null
+  highlighted: boolean
   onSelect: (target: TimelineTarget) => void
 }) {
-  const selected = selection != null
+  const selected = highlighted
   const ref = useRevealWhenPicked(selection)
   return (
     <button
@@ -182,13 +192,15 @@ function StayRow({
 function PointRow({
   point,
   selection,
+  highlighted,
   onSelect,
 }: {
   point: Point
   selection: object | null
+  highlighted: boolean
   onSelect: (target: TimelineTarget) => void
 }) {
-  const selected = selection != null
+  const selected = highlighted
   const Icon = point.noise ? TriangleAlertIcon : MapPinIcon
   const ref = useRevealWhenPicked(selection)
   return (

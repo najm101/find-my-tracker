@@ -1,10 +1,11 @@
 import { useEffect, useMemo } from "react"
 
-import { MapMarker, MapRoute, MarkerContent, useMap } from "~/components/ui/map"
+import { MapMarker, MarkerContent, useMap } from "~/components/ui/map"
 import type { Schemas } from "~/lib/api/client"
 
 import { BeaconMarker } from "./beacon-marker"
 import { FitToData, moveTo } from "./fit-to-data"
+import { PathLayer, type Segment } from "./path-layer"
 import { SightingsLayer } from "./sightings-layer"
 
 type Beacon = Schemas["BeaconOut"]
@@ -16,6 +17,8 @@ export type MapFocus = {
   key: string
   /** Move the map to it. False when it was picked on the map, where it's already in view. */
   move: boolean
+  /** Other rows to highlight with it, e.g. the start of a picked segment. */
+  also?: string[]
 }
 
 type Props = {
@@ -37,6 +40,8 @@ type Props = {
   focus?: MapFocus | null
   /** Called when a history dot is clicked. */
   onPick?: (point: Point) => void
+  /** Called when a path segment is clicked (its popup shows either way). */
+  onPickSegment?: (segment: Segment) => void
   now: number
 }
 
@@ -50,6 +55,7 @@ export function TrackerLayers({
   framePadding,
   focus,
   onPick,
+  onPickSegment,
   now,
 }: Props) {
   const colors = useMemo(
@@ -73,35 +79,28 @@ export function TrackerLayers({
     [points, visibleIds]
   )
 
+  const goodPoints = useMemo(
+    () => visiblePoints.filter((p) => !p.noise),
+    [visiblePoints]
+  )
+
   const frame = useMemo<[number, number][]>(() => {
-    if (points)
-      return visiblePoints
-        .filter((p) => !p.noise)
-        .map((p) => [p.longitude, p.latitude])
+    if (points) return goodPoints.map((p) => [p.longitude, p.latitude])
     return beacons.flatMap((b) =>
       b.latest ? [[b.latest.longitude, b.latest.latitude]] : []
     ) as [number, number][]
-  }, [points, visiblePoints, beacons])
+  }, [points, goodPoints, beacons])
 
   return (
     <>
       {points && (
         <>
-          {beacons.map((b) => {
-            const path = byBeacon.get(b.id)
-            if (!path || path.length < 2) return null
-            return (
-              <MapRoute
-                key={`path-${b.id}`}
-                id={`path-${b.id}`}
-                coordinates={path.map((p) => [p.longitude, p.latitude])}
-                color={b.color ?? "#2563eb"}
-                width={b.id === selectedId ? 5 : 3}
-                opacity={selectedId && b.id !== selectedId ? 0.35 : 0.85}
-                interactive={false}
-              />
-            )
-          })}
+          <PathLayer
+            points={goodPoints}
+            colors={colors}
+            selectedId={selectedId}
+            onPick={onPickSegment}
+          />
           <SightingsLayer
             points={visiblePoints}
             colors={colors}

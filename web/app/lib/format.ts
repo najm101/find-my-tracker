@@ -45,3 +45,22 @@ export function date(iso: string | null | undefined): string {
   if (!iso) return "—"
   return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" })
 }
+
+/** "45 s", "12 min", "3 h 10 min", "2 d 4 h". */
+export function duration(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds))
+  if (s < 60) return `${s} s`
+  const m = Math.round(s / 60)
+  if (m < 60) return `${m} min`
+  const h = Math.floor(m / 60)
+  if (h < 24) return m % 60 ? `${h} h ${m % 60} min` : `${h} h`
+  const d = Math.floor(h / 24)
+  return h % 24 ? `${d} d ${h % 24} h` : `${d} d`
+}
+
+/** "640 m", "3.2 km", "48 km". */
+export function distance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)} m`
+  const km = meters / 1000
+  return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`
+}

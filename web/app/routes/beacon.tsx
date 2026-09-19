@@ -81,6 +81,13 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
   const noisyCount = history.points.length - good.length
   const points = showNoise ? history.points : good
   const stays = showNoise ? [] : history.stays
+  // The timeline row a report is shown in: its stay, if it's part of one.
+  const rowKey = (p: { observed_at: string }) => {
+    const stay = stays.find(
+      (s) => p.observed_at >= s.arrived_at && p.observed_at <= s.left_at
+    )
+    return stay ? `stay-${stay.arrived_at}` : p.observed_at
+  }
 
   return (
     <>
@@ -89,17 +96,23 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
         points={points}
         selectedId={beacon.id}
         focus={focus}
-        onPick={(p) => {
-          const stay = stays.find(
-            (s) => p.observed_at >= s.arrived_at && p.observed_at <= s.left_at
-          )
+        onPick={(p) =>
           setFocus({
             latitude: p.latitude,
             longitude: p.longitude,
-            key: stay ? `stay-${stay.arrived_at}` : p.observed_at,
+            key: rowKey(p),
             move: false,
           })
-        }}
+        }
+        onPickSegment={({ from, to }) =>
+          setFocus({
+            latitude: to.latitude,
+            longitude: to.longitude,
+            key: rowKey(to),
+            also: [rowKey(from)],
+            move: false,
+          })
+        }
         fitKey={`${beacon.id}|${range.preset}|${range.from.toISOString().slice(0, 10)}`}
         now={loadedAt}
       />
