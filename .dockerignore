@@ -1,0 +1,13 @@
+**/node_modules
+**/.venv
+**/__pycache__
+web/build
+web/.react-router
+data
+vendor
+spike
+.git
+.github
+docs
+*.md
+!README.md

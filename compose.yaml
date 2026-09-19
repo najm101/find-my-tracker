@@ -1,0 +1,14 @@
+services:
+  find-my-tracker:
+    image: ghcr.io/najm101/find-my-tracker:latest
+    # To build from source instead: comment out `image` and uncomment `build`.
+    # build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env (openssl rand -base64 48)}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      # ANISETTE_URL: http://anisette:6969   # only if the built-in provider stops working
+    restart: unless-stopped

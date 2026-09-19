@@ -1,0 +1,7 @@
+packages: []
+
+allowBuilds:
+  esbuild: true
+  msw: false
+  # Prebuilt binaries arrive via optional dependencies; the postinstall is only a fallback.
+  unrs-resolver: false

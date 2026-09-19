@@ -1,0 +1,38 @@
+# Secrets: tag keys, Apple session, database. Never commit.
+data/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Web
+node_modules/
+web/build/
+web/.react-router/
+
+# Reference clones (FindMy.py fork, OpenTagViewer) - not part of the project
+vendor/
+
+.DS_Store
+.env
+.pytest_cache/
+.ruff_cache/
+
+# Local AI-assistant files and private planning notes (not part of the repo)
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+.claude/
+.cursor/
+.cursorrules
+.windsurf/
+.aider*
+.continue/
+.mcp.json
+docs/PLAN.md
+
+# Old proof of concept and its root project (safe to delete locally)
+spike/
+/pyproject.toml
+/uv.lock

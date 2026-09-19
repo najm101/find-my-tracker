@@ -1,0 +1,2064 @@
+{
+  "components": {
+    "schemas": {
+      "AccountOut": {
+        "properties": {
+          "apple_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apple Id"
+          },
+          "connected_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connected At"
+          },
+          "device_serial": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How this server appears in the Apple account's device list (as a Mac).",
+            "title": "Device Serial"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "AccountOut",
+        "type": "object"
+      },
+      "AccountStatus": {
+        "enum": [
+          "none",
+          "active",
+          "needs_reauth"
+        ],
+        "title": "AccountStatus",
+        "type": "string"
+      },
+      "AppSettings": {
+        "description": "User-editable settings. Defaults apply until changed.",
+        "properties": {
+          "poll_interval_minutes": {
+            "default": 30,
+            "description": "Minutes between polls. Below 30 raises the risk of an Apple account ban.",
+            "maximum": 1440.0,
+            "minimum": 15.0,
+            "title": "Poll Interval Minutes",
+            "type": "integer"
+          }
+        },
+        "title": "AppSettings",
+        "type": "object"
+      },
+      "Battery": {
+        "enum": [
+          "full",
+          "medium",
+          "low",
+          "very_low"
+        ],
+        "title": "Battery",
+        "type": "string"
+      },
+      "BeaconKind": {
+        "enum": [
+          "airtag",
+          "iphone",
+          "ipad",
+          "mac",
+          "watch",
+          "airpods",
+          "other"
+        ],
+        "title": "BeaconKind",
+        "type": "string"
+      },
+      "BeaconOut": {
+        "properties": {
+          "apple_name": {
+            "title": "Apple Name",
+            "type": "string"
+          },
+          "battery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Battery"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "emoji": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emoji"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BeaconKind"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestLocation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location_count": {
+            "title": "Location Count",
+            "type": "integer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "name": {
+            "description": "Display name: the user's override, else Apple's name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "paired_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paired At"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "apple_name",
+          "kind",
+          "model",
+          "emoji",
+          "color",
+          "enabled",
+          "paired_at",
+          "location_count",
+          "latest",
+          "battery"
+        ],
+        "title": "BeaconOut",
+        "type": "object"
+      },
+      "BeaconUpdate": {
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "pattern": "^#[0-9a-fA-F]{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "emoji": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emoji"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          }
+        },
+        "title": "BeaconUpdate",
+        "type": "object"
+      },
+      "CandidateOut": {
+        "properties": {
+          "already_tracked": {
+            "title": "Already Tracked",
+            "type": "boolean"
+          },
+          "identifier": {
+            "title": "Identifier",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BeaconKind"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "paired_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paired At"
+          },
+          "personal_device": {
+            "description": "An iPhone/iPad/Mac/Watch: tracking it tracks its owner. Unticked by default.",
+            "title": "Personal Device",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "identifier",
+          "name",
+          "model",
+          "kind",
+          "paired_at",
+          "personal_device",
+          "already_tracked"
+        ],
+        "title": "CandidateOut",
+        "type": "object"
+      },
+      "CodeRequest": {
+        "properties": {
+          "code": {
+            "maxLength": 10,
+            "minLength": 4,
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "CodeRequest",
+        "type": "object"
+      },
+      "DeviceOut": {
+        "properties": {
+          "added_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Added At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "serial": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serial"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "model",
+          "serial",
+          "added_at"
+        ],
+        "title": "DeviceOut",
+        "type": "object"
+      },
+      "ExportFormat": {
+        "enum": [
+          "csv",
+          "geojson"
+        ],
+        "title": "ExportFormat",
+        "type": "string"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "ImportRequest": {
+        "properties": {
+          "identifiers": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Identifiers",
+            "type": "array"
+          },
+          "poll_interval_minutes": {
+            "anyOf": [
+              {
+                "maximum": 1440.0,
+                "minimum": 15.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poll Interval Minutes"
+          }
+        },
+        "required": [
+          "identifiers"
+        ],
+        "title": "ImportRequest",
+        "type": "object"
+      },
+      "LatestLocation": {
+        "properties": {
+          "accuracy_m": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy M"
+          },
+          "latitude": {
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "title": "Longitude",
+            "type": "number"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "observed_at",
+          "latitude",
+          "longitude",
+          "accuracy_m"
+        ],
+        "title": "LatestLocation",
+        "type": "object"
+      },
+      "LocationPoint": {
+        "properties": {
+          "accuracy_m": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy M"
+          },
+          "beacon_id": {
+            "title": "Beacon Id",
+            "type": "integer"
+          },
+          "latitude": {
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "title": "Longitude",
+            "type": "number"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "beacon_id",
+          "observed_at",
+          "latitude",
+          "longitude",
+          "accuracy_m"
+        ],
+        "title": "LocationPoint",
+        "type": "object"
+      },
+      "LocationsResponse": {
+        "properties": {
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/LocationPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "points",
+          "truncated"
+        ],
+        "title": "LocationsResponse",
+        "type": "object"
+      },
+      "LoginRequest": {
+        "properties": {
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "LoginRequest",
+        "type": "object"
+      },
+      "MeResponse": {
+        "properties": {
+          "authenticated": {
+            "title": "Authenticated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "authenticated"
+        ],
+        "title": "MeResponse",
+        "type": "object"
+      },
+      "MethodOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "label"
+        ],
+        "title": "MethodOut",
+        "type": "object"
+      },
+      "MethodRequest": {
+        "properties": {
+          "method_id": {
+            "title": "Method Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "method_id"
+        ],
+        "title": "MethodRequest",
+        "type": "object"
+      },
+      "PollOutcome": {
+        "enum": [
+          "ok",
+          "auth_failed",
+          "apple_error",
+          "error"
+        ],
+        "title": "PollOutcome",
+        "type": "string"
+      },
+      "PollRunOut": {
+        "properties": {
+          "beacons_polled": {
+            "title": "Beacons Polled",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "new_locations": {
+            "title": "New Locations",
+            "type": "integer"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PollOutcome"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reports_seen": {
+            "title": "Reports Seen",
+            "type": "integer"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "trigger": {
+            "$ref": "#/components/schemas/PollTrigger"
+          }
+        },
+        "required": [
+          "id",
+          "trigger",
+          "started_at",
+          "finished_at",
+          "outcome",
+          "beacons_polled",
+          "reports_seen",
+          "new_locations",
+          "error"
+        ],
+        "title": "PollRunOut",
+        "type": "object"
+      },
+      "PollTrigger": {
+        "enum": [
+          "schedule",
+          "manual"
+        ],
+        "title": "PollTrigger",
+        "type": "string"
+      },
+      "SettingsUpdate": {
+        "properties": {
+          "poll_interval_minutes": {
+            "anyOf": [
+              {
+                "maximum": 1440.0,
+                "minimum": 15.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poll Interval Minutes"
+          }
+        },
+        "title": "SettingsUpdate",
+        "type": "object"
+      },
+      "StartRequest": {
+        "properties": {
+          "apple_id": {
+            "maxLength": 320,
+            "minLength": 3,
+            "title": "Apple Id",
+            "type": "string"
+          },
+          "password": {
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "apple_id",
+          "password"
+        ],
+        "title": "StartRequest",
+        "type": "object"
+      },
+      "TrackingStatus": {
+        "properties": {
+          "account_status": {
+            "$ref": "#/components/schemas/AccountStatus"
+          },
+          "interval_minutes": {
+            "title": "Interval Minutes",
+            "type": "integer"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PollRunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Run At"
+          },
+          "refresh_available_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Available At"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "account_status",
+          "running",
+          "interval_minutes",
+          "last_run",
+          "next_run_at",
+          "refresh_available_at"
+        ],
+        "title": "TrackingStatus",
+        "type": "object"
+      },
+      "UnlockRequest": {
+        "properties": {
+          "device_id": {
+            "title": "Device Id",
+            "type": "string"
+          },
+          "passcode": {
+            "minLength": 1,
+            "title": "Passcode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "passcode"
+        ],
+        "title": "UnlockRequest",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "Visit": {
+        "properties": {
+          "arrived_at": {
+            "format": "date-time",
+            "title": "Arrived At",
+            "type": "string"
+          },
+          "beacon_id": {
+            "title": "Beacon Id",
+            "type": "integer"
+          },
+          "closest_m": {
+            "title": "Closest M",
+            "type": "number"
+          },
+          "left_at": {
+            "format": "date-time",
+            "title": "Left At",
+            "type": "string"
+          },
+          "point_count": {
+            "title": "Point Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "beacon_id",
+          "arrived_at",
+          "left_at",
+          "point_count",
+          "closest_m"
+        ],
+        "title": "Visit",
+        "type": "object"
+      },
+      "VisitsResponse": {
+        "properties": {
+          "visits": {
+            "items": {
+              "$ref": "#/components/schemas/Visit"
+            },
+            "title": "Visits",
+            "type": "array"
+          }
+        },
+        "required": [
+          "visits"
+        ],
+        "title": "VisitsResponse",
+        "type": "object"
+      },
+      "WizardStep": {
+        "enum": [
+          "credentials",
+          "two_factor_method",
+          "two_factor_code",
+          "device",
+          "beacons",
+          "done"
+        ],
+        "title": "WizardStep",
+        "type": "string"
+      },
+      "WizardView": {
+        "properties": {
+          "apple_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apple Id"
+          },
+          "beacons": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CandidateOut"
+            },
+            "title": "Beacons",
+            "type": "array"
+          },
+          "chosen_method_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen Method Id"
+          },
+          "devices": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DeviceOut"
+            },
+            "title": "Devices",
+            "type": "array"
+          },
+          "imported_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported Count"
+          },
+          "methods": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MethodOut"
+            },
+            "title": "Methods",
+            "type": "array"
+          },
+          "mode": {
+            "default": "sign_in",
+            "description": "`add`: resumed from the saved session, so no Apple ID or 2FA steps.",
+            "enum": [
+              "sign_in",
+              "add"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "passcode_attempts_left": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passcode Attempts Left"
+          },
+          "step": {
+            "$ref": "#/components/schemas/WizardStep"
+          }
+        },
+        "required": [
+          "step"
+        ],
+        "title": "WizardView",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Find My Tracker",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/apple/account": {
+      "delete": {
+        "operationId": "sign_out_api_apple_account_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sign Out",
+        "tags": [
+          "apple"
+        ]
+      },
+      "get": {
+        "operationId": "get_account_api_apple_account_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Account",
+        "tags": [
+          "apple"
+        ]
+      }
+    },
+    "/api/apple/wizard": {
+      "delete": {
+        "operationId": "cancel_wizard_api_apple_wizard_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Cancel Wizard",
+        "tags": [
+          "apple"
+        ]
+      },
+      "get": {
+        "operationId": "get_wizard_api_apple_wizard_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WizardView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Wizard",
+        "tags": [
+          "apple"
+        ]
+      }
+    },
+    "/api/apple/wizard/2fa/request": {
+      "post": {
+        "operationId": "request_code_api_apple_wizard_2fa_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MethodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WizardView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Code",
+        "tags": [
+          "apple"
+        ]
+      }
+    },
+    "/api/apple/wizard/2fa/submit": {
+      "post": {
+        "operationId": "submit_code_api_apple_wizard_2fa_submit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WizardView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Code",
+        "tags": [
+          "apple"
+        ]
+      }
+    },
+    "/api/apple/wizard/import": {
+      "post": {
+        "operationId": "import_beacons_api_apple_wizard_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WizardView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Import Beacons",
+        "tags": [
+          "apple"
+        ]
+      }
+    },
+    "/api/apple/wizard/resume": {
+      "post": {
+        "description": "Add beacons with the saved Apple session: no Apple ID, 2FA or (usually) passcode.",
+        "operationId": "resume_wizard_api_apple_wizard_resume_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WizardView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Resume Wizard",
+        "tags": [
+          "apple"
+        ]
+      }
+    },
+    "/api/apple/wizard/start": {
+      "post": {
+        "operationId": "start_wizard_api_apple_wizard_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WizardView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Wizard",
+        "tags": [
+          "apple"
+        ]
+      }
+    },
+    "/api/apple/wizard/unlock": {
+      "post": {
+        "operationId": "unlock_api_apple_wizard_unlock_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlockRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WizardView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unlock",
+        "tags": [
+          "apple"
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout_api_auth_logout_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "me_api_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/beacons": {
+      "get": {
+        "operationId": "list_beacons_api_beacons_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BeaconOut"
+                  },
+                  "title": "Response List Beacons Api Beacons Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Beacons",
+        "tags": [
+          "beacons"
+        ]
+      }
+    },
+    "/api/beacons/{beacon_id}": {
+      "delete": {
+        "operationId": "delete_beacon_api_beacons__beacon_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "beacon_id",
+            "required": true,
+            "schema": {
+              "title": "Beacon Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Beacon",
+        "tags": [
+          "beacons"
+        ]
+      },
+      "patch": {
+        "operationId": "update_beacon_api_beacons__beacon_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "beacon_id",
+            "required": true,
+            "schema": {
+              "title": "Beacon Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BeaconUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BeaconOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Beacon",
+        "tags": [
+          "beacons"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/locations": {
+      "get": {
+        "description": "Location history for all beacons (or `beacon_id`s), ordered by beacon then time.",
+        "operationId": "history_api_locations_get",
+        "parameters": [
+          {
+            "description": "Only these beacons. Omit for all beacons.",
+            "in": "query",
+            "name": "beacon_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only these beacons. Omit for all beacons.",
+              "title": "Beacon Id"
+            }
+          },
+          {
+            "description": "Default: 24 h before `to`.",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: 24 h before `to`.",
+              "title": "From"
+            }
+          },
+          {
+            "description": "Default: now.",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: now.",
+              "title": "To"
+            }
+          },
+          {
+            "description": "min_lon,min_lat,max_lon,max_lat",
+            "in": "query",
+            "name": "bbox",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "min_lon,min_lat,max_lon,max_lat",
+              "examples": [
+                "4.8,52.3,5.0,52.4"
+              ],
+              "title": "Bbox"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20000,
+              "maximum": 50000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "History",
+        "tags": [
+          "locations"
+        ]
+      }
+    },
+    "/api/locations/export": {
+      "get": {
+        "operationId": "export_api_locations_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ExportFormat",
+              "default": "csv"
+            }
+          },
+          {
+            "description": "Only these beacons. Omit for all beacons.",
+            "in": "query",
+            "name": "beacon_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only these beacons. Omit for all beacons.",
+              "title": "Beacon Id"
+            }
+          },
+          {
+            "description": "Default: 24 h before `to`.",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: 24 h before `to`.",
+              "title": "From"
+            }
+          },
+          {
+            "description": "Default: now.",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: now.",
+              "title": "To"
+            }
+          },
+          {
+            "description": "min_lon,min_lat,max_lon,max_lat",
+            "in": "query",
+            "name": "bbox",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "min_lon,min_lat,max_lon,max_lat",
+              "examples": [
+                "4.8,52.3,5.0,52.4"
+              ],
+              "title": "Bbox"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export",
+        "tags": [
+          "locations"
+        ]
+      }
+    },
+    "/api/locations/visits": {
+      "get": {
+        "description": "When each beacon was near (lat, lon): consecutive sightings grouped into visits.",
+        "operationId": "visits_api_locations_visits_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lat",
+            "required": true,
+            "schema": {
+              "maximum": 90,
+              "minimum": -90,
+              "title": "Lat",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lon",
+            "required": true,
+            "schema": {
+              "maximum": 180,
+              "minimum": -180,
+              "title": "Lon",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "radius_m",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "exclusiveMinimum": 0,
+              "maximum": 50000,
+              "title": "Radius M",
+              "type": "number"
+            }
+          },
+          {
+            "description": "Only these beacons. Omit for all beacons.",
+            "in": "query",
+            "name": "beacon_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only these beacons. Omit for all beacons.",
+              "title": "Beacon Id"
+            }
+          },
+          {
+            "description": "Default: 24 h before `to`.",
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: 24 h before `to`.",
+              "title": "From"
+            }
+          },
+          {
+            "description": "Default: now.",
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: now.",
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Visits",
+        "tags": [
+          "locations"
+        ]
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "operationId": "get_settings_api_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Settings",
+        "tags": [
+          "settings"
+        ]
+      },
+      "patch": {
+        "operationId": "update_settings_api_settings_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Settings",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/tracking/refresh": {
+      "post": {
+        "operationId": "refresh_api_tracking_refresh_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Refresh",
+        "tags": [
+          "tracking"
+        ]
+      }
+    },
+    "/api/tracking/runs": {
+      "get": {
+        "operationId": "runs_api_tracking_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PollRunOut"
+                  },
+                  "title": "Response Runs Api Tracking Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Runs",
+        "tags": [
+          "tracking"
+        ]
+      }
+    },
+    "/api/tracking/status": {
+      "get": {
+        "operationId": "status_api_tracking_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Status",
+        "tags": [
+          "tracking"
+        ]
+      }
+    }
+  }
+}

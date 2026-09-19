@@ -1,0 +1,59 @@
+[project]
+name = "find-my-tracker"
+version = "0.1.0"
+description = "Self-hosted location history for AirTags and other Find My beacons."
+license = "MIT"
+requires-python = ">=3.13,<3.15"
+dependencies = [
+    "fastapi>=0.141.1,<0.142",
+    "uvicorn[standard]>=0.53.0,<0.54",
+    "pydantic>=2.13.5,<3",
+    "pydantic-settings>=2.11,<3",
+    # iCloud Keychain beacon export is unreleased upstream (malmeloo/FindMy.py#173).
+    # Same fork + commit OpenTagViewer pins. Switch to a PyPI pin once it lands.
+    "FindMy",
+    "sqlalchemy[asyncio]>=2.0.54,<2.1",
+    "aiosqlite>=0.21",
+    "alembic>=1.16",
+    "itsdangerous>=2.2",
+]
+
+[project.scripts]
+find-my-tracker = "find_my_tracker.__main__:main"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14",
+    "basedpyright>=1.31",
+    "pytest>=9.1,<9.2",
+    "pytest-asyncio>=1.4",
+    "httpx2>=2.13.0",
+]
+
+[tool.uv.sources]
+FindMy = { git = "https://github.com/parawanderer/FindMy.py", rev = "7969003ca785658369b650f75d9e7ca519566bf6" }
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "RET", "PTH", "ASYNC", "S", "RUF"]
+ignore = ["S101", "N818"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "PLR2004"]
+
+[tool.basedpyright]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

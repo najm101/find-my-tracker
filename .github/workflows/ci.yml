@@ -1,0 +1,78 @@
+name: CI
+
+# Checks for pull requests. Pushes to main and version tags run these same checks
+# through release.yml (workflow_call) before publishing an image.
+on:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run basedpyright
+      - run: uv run pytest -q
+      - name: OpenAPI schema is up to date
+        run: |
+          uv run python -m find_my_tracker.openapi > /tmp/openapi.json
+          diff -u openapi.json /tmp/openapi.json || (echo "Run: cd server && uv run python -m find_my_tracker.openapi > openapi.json && cd ../web && pnpm api:types" && exit 1)
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.4.2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: API types match the schema
+        run: pnpm api:types && git diff --exit-code app/lib/api/schema.d.ts
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [server, web]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          load: true
+          tags: find-my-tracker:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Smoke test
+        run: |
+          docker run -d --name fmt -p 8080:8080 \
+            -e SECRET_KEY="$(openssl rand -base64 48)" -e ADMIN_PASSWORD=ci-password \
+            find-my-tracker:ci
+          for i in $(seq 1 30); do curl -sf localhost:8080/api/health && break; sleep 1; done
+          curl -sf localhost:8080/api/health
+          curl -sf localhost:8080/ | grep -q "<html"
+          docker logs fmt
