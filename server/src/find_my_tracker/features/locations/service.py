@@ -6,16 +6,19 @@ import json
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from itertools import groupby
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from find_my_tracker.core.clock import to_datetime
+from find_my_tracker.features.locations import denoise
 from find_my_tracker.features.locations.geo import BBox, haversine_m
 from find_my_tracker.features.locations.models import Location
 from find_my_tracker.features.locations.repository import LocationRepository
 from find_my_tracker.features.locations.schemas import (
     LocationPoint,
     LocationsResponse,
+    Stay,
     Visit,
     VisitsResponse,
 )
@@ -79,9 +82,8 @@ class LocationService:
         rows = await self._repo.query(
             beacon_ids=beacon_ids, start=span.start, end=span.end, bbox=bbox, limit=limit + 1
         )
-        return LocationsResponse(
-            points=[_point(r) for r in rows[:limit]], truncated=len(rows) > limit
-        )
+        points, stays = judge(rows[:limit])
+        return LocationsResponse(points=points, stays=stays, truncated=len(rows) > limit)
 
     async def visits(
         self,
@@ -201,11 +203,38 @@ def to_geojson(rows: Iterable[Location], names: dict[int, str]) -> str:
     return json.dumps({"type": "FeatureCollection", "features": paths + features})
 
 
-def _point(r: Location) -> LocationPoint:
+def judge(rows: Sequence[Location]) -> tuple[list[LocationPoint], list[Stay]]:
+    """Flags noisy reports and finds stays, per beacon. `rows` are ordered by beacon, then time."""
+    points: list[LocationPoint] = []
+    stays: list[Stay] = []
+    for beacon_id, group in groupby(rows, key=lambda r: r.beacon_id):
+        beacon_rows = list(group)
+        samples = [
+            denoise.Sample(r.observed_at, r.latitude, r.longitude, r.accuracy_m)
+            for r in beacon_rows
+        ]
+        verdicts = denoise.classify(samples)
+        points.extend(_point(r, v) for r, v in zip(beacon_rows, verdicts, strict=True))
+        stays.extend(
+            Stay(
+                beacon_id=beacon_id,
+                arrived_at=to_datetime(samples[s.first].observed_at),  # pyright: ignore[reportArgumentType]
+                left_at=to_datetime(samples[s.last].observed_at),  # pyright: ignore[reportArgumentType]
+                latitude=s.latitude,
+                longitude=s.longitude,
+                point_count=s.count,
+            )
+            for s in denoise.stays(samples, verdicts)
+        )
+    return points, stays
+
+
+def _point(r: Location, noise: denoise.Noise | None = None) -> LocationPoint:
     return LocationPoint(
         beacon_id=r.beacon_id,
         observed_at=to_datetime(r.observed_at),  # pyright: ignore[reportArgumentType]
         latitude=r.latitude,
         longitude=r.longitude,
         accuracy_m=r.accuracy_m,
+        noise=noise,
     )

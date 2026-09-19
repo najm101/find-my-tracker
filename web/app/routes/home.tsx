@@ -10,7 +10,13 @@ import { getLocations } from "~/features/history/api/locations"
 import { HistoryToolbar } from "~/features/history/components/history-toolbar"
 import { TrackerMap } from "~/features/map/components/tracker-map"
 import { RefreshButton } from "~/features/tracking/components/refresh-button"
-import { getHidden, getMode, withMode } from "~/lib/search-params"
+import {
+  getHidden,
+  getMode,
+  getShowNoise,
+  withMode,
+  withShowNoise,
+} from "~/lib/search-params"
 import { rangeFromParams, withRange } from "~/lib/time-range"
 
 import type { Route } from "./+types/home"
@@ -39,13 +45,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const hidden = getHidden(params)
   const visible = beacons.filter((b) => !hidden.has(b.id))
   const located = beacons.some((b) => b.latest)
+  const showNoise = getShowNoise(params)
+  const shown = history?.points.filter((p) => !hidden.has(p.beacon_id))
+  const good = shown?.filter((p) => !p.noise)
 
   return (
     <div className="relative h-svh w-full">
       <TrackerMap
         className="absolute inset-0"
         beacons={visible}
-        points={history?.points}
+        points={showNoise ? history?.points : good}
         fitKey={`${mode}|${range.preset}|${range.preset === "custom" ? range.from.toISOString() : ""}`}
         now={loadedAt}
         controls={<RefreshButton status={status} now={loadedAt} />}
@@ -59,13 +68,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             to: range.to,
             beaconIds: hidden.size ? visible.map((b) => b.id) : undefined,
           }}
-          pointCount={
-            history?.points.filter((p) => !hidden.has(p.beacon_id)).length
-          }
+          pointCount={good?.length}
+          noisyCount={(shown?.length ?? 0) - (good?.length ?? 0)}
+          showNoise={showNoise}
           truncated={history?.truncated}
           onMode={(m) => setParams(withMode(params, m))}
           onPreset={(preset) => setParams(withRange(params, { preset }))}
           onCustom={(from, to) => setParams(withRange(params, { from, to }))}
+          onShowNoise={(on) => setParams(withShowNoise(params, on))}
         />
       </div>
       {!located && (

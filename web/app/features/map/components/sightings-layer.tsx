@@ -7,8 +7,8 @@ import type { Schemas } from "~/lib/api/client"
 type Point = Schemas["LocationPoint"]
 
 /**
- * Every sighting as a small dot, coloured per beacon. A single circle layer, because thousands
- * of DOM markers would be far too slow.
+ * Every sighting as a small dot, coloured per beacon; noisy ones faint. A single circle layer,
+ * because thousands of DOM markers would be far too slow.
  */
 export function SightingsLayer({
   points,
@@ -28,7 +28,10 @@ export function SightingsLayer({
       features: points.map((p) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [p.longitude, p.latitude] },
-        properties: { color: colors.get(p.beacon_id) ?? "#2563eb" },
+        properties: {
+          color: colors.get(p.beacon_id) ?? "#2563eb",
+          noisy: p.noise != null,
+        },
       })),
     }),
     [points, colors]
@@ -44,8 +47,8 @@ export function SightingsLayer({
       paint: {
         "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2, 16, 5],
         "circle-color": ["get", "color"],
-        "circle-opacity": 0.85,
-        "circle-stroke-width": 1,
+        "circle-opacity": ["case", ["get", "noisy"], 0.3, 0.85],
+        "circle-stroke-width": ["case", ["get", "noisy"], 0, 1],
         "circle-stroke-color": "#ffffff",
       },
     })

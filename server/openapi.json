@@ -538,6 +538,17 @@
             "title": "Longitude",
             "type": "number"
           },
+          "noise": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Noise"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why this report is probably not where the beacon was. Null for good reports."
+          },
           "observed_at": {
             "format": "date-time",
             "title": "Observed At",
@@ -561,6 +572,14 @@
               "$ref": "#/components/schemas/LocationPoint"
             },
             "title": "Points",
+            "type": "array"
+          },
+          "stays": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Stay"
+            },
+            "title": "Stays",
             "type": "array"
           },
           "truncated": {
@@ -636,6 +655,15 @@
         ],
         "title": "MethodRequest",
         "type": "object"
+      },
+      "Noise": {
+        "enum": [
+          "spike",
+          "too_fast",
+          "imprecise"
+        ],
+        "title": "Noise",
+        "type": "string"
       },
       "PollOutcome": {
         "enum": [
@@ -767,6 +795,47 @@
           "password"
         ],
         "title": "StartRequest",
+        "type": "object"
+      },
+      "Stay": {
+        "description": "A stretch where a beacon's good reports stayed in one place.",
+        "properties": {
+          "arrived_at": {
+            "format": "date-time",
+            "title": "Arrived At",
+            "type": "string"
+          },
+          "beacon_id": {
+            "title": "Beacon Id",
+            "type": "integer"
+          },
+          "latitude": {
+            "title": "Latitude",
+            "type": "number"
+          },
+          "left_at": {
+            "format": "date-time",
+            "title": "Left At",
+            "type": "string"
+          },
+          "longitude": {
+            "title": "Longitude",
+            "type": "number"
+          },
+          "point_count": {
+            "title": "Point Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "beacon_id",
+          "arrived_at",
+          "left_at",
+          "latitude",
+          "longitude",
+          "point_count"
+        ],
+        "title": "Stay",
         "type": "object"
       },
       "TrackingStatus": {

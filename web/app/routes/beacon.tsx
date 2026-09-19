@@ -14,11 +14,16 @@ import {
 } from "~/components/ui/card"
 import { ScrollArea } from "~/components/ui/scroll-area"
 import { getLocations } from "~/features/history/api/locations"
-import { DayTimeline } from "~/features/history/components/day-timeline"
+import {
+  DayTimeline,
+  type TimelineTarget,
+} from "~/features/history/components/day-timeline"
 import { ExportMenu } from "~/features/history/components/export-menu"
+import { NoiseToggle } from "~/features/history/components/noise-toggle"
 import { RangePicker } from "~/features/history/components/range-picker"
 import { TrackerMap } from "~/features/map/components/tracker-map"
 import { BEACON_KINDS } from "~/lib/beacon-kind"
+import { getShowNoise, withShowNoise } from "~/lib/search-params"
 import { rangeFromParams, withRange } from "~/lib/time-range"
 
 import type { Route } from "./+types/beacon"
@@ -46,11 +51,8 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
   const { beaconId, range, history } = loaderData
   const { beacons, loadedAt } = useLayoutData()
   const [params, setParams] = useSearchParams()
-  const [focus, setFocus] = useState<{
-    latitude: number
-    longitude: number
-    key: string
-  } | null>(null)
+  const [focus, setFocus] = useState<TimelineTarget | null>(null)
+  const showNoise = getShowNoise(params)
   const beacon = beacons.find((b) => b.id === beaconId)
 
   if (!beacon) {
@@ -68,6 +70,9 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
 
   const kind = BEACON_KINDS[beacon.kind]
   const filters = { from: range.from, to: range.to, beaconIds: [beacon.id] }
+  const good = history.points.filter((p) => !p.noise)
+  const noisyCount = history.points.length - good.length
+  const points = showNoise ? history.points : good
 
   return (
     <div className="relative flex h-svh w-full flex-col md:flex-row">
@@ -75,7 +80,7 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
         <TrackerMap
           className="absolute inset-0"
           beacons={[beacon]}
-          points={history.points}
+          points={points}
           selectedId={beacon.id}
           focus={focus}
           fitKey={`${beacon.id}|${range.preset}|${range.from.toISOString().slice(0, 10)}`}
@@ -120,23 +125,26 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
               }
             />
             <ExportMenu filters={filters} />
+            <NoiseToggle
+              pressed={showNoise}
+              hiddenCount={noisyCount}
+              onPressedChange={(on) => setParams(withShowNoise(params, on))}
+            />
           </div>
           <p className="text-xs text-muted-foreground">
-            {history.points.length.toLocaleString()} sighting
-            {history.points.length === 1 ? "" : "s"} in this range
+            {good.length.toLocaleString()} sighting
+            {good.length === 1 ? "" : "s"} in this range
+            {noisyCount > 0 &&
+              !showNoise &&
+              `, ${noisyCount.toLocaleString()} unlikely hidden`}
             {history.truncated && " (limit reached, narrow the range)"}
           </p>
           <ScrollArea className="min-h-0 flex-1 pr-3">
             <DayTimeline
-              points={history.points}
+              points={points}
+              stays={showNoise ? [] : history.stays}
               selected={focus?.key}
-              onSelect={(p) =>
-                setFocus({
-                  latitude: p.latitude,
-                  longitude: p.longitude,
-                  key: p.observed_at,
-                })
-              }
+              onSelect={setFocus}
             />
           </ScrollArea>
         </CardContent>

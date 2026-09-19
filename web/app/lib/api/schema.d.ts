@@ -550,6 +550,8 @@ export interface components {
       latitude: number
       /** Longitude */
       longitude: number
+      /** @description Why this report is probably not where the beacon was. Null for good reports. */
+      noise?: components["schemas"]["Noise"] | null
       /**
        * Observed At
        * Format: date-time
@@ -560,6 +562,11 @@ export interface components {
     LocationsResponse: {
       /** Points */
       points: components["schemas"]["LocationPoint"][]
+      /**
+       * Stays
+       * @default []
+       */
+      stays: components["schemas"]["Stay"][]
       /** Truncated */
       truncated: boolean
     }
@@ -587,6 +594,11 @@ export interface components {
       /** Method Id */
       method_id: number
     }
+    /**
+     * Noise
+     * @enum {string}
+     */
+    Noise: "spike" | "too_fast" | "imprecise"
     /**
      * PollOutcome
      * @enum {string}
@@ -630,6 +642,30 @@ export interface components {
       apple_id: string
       /** Password */
       password: string
+    }
+    /**
+     * Stay
+     * @description A stretch where a beacon's good reports stayed in one place.
+     */
+    Stay: {
+      /**
+       * Arrived At
+       * Format: date-time
+       */
+      arrived_at: string
+      /** Beacon Id */
+      beacon_id: number
+      /** Latitude */
+      latitude: number
+      /**
+       * Left At
+       * Format: date-time
+       */
+      left_at: string
+      /** Longitude */
+      longitude: number
+      /** Point Count */
+      point_count: number
     }
     /** TrackingStatus */
     TrackingStatus: {

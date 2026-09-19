@@ -21,7 +21,10 @@ type Point = Schemas["LocationPoint"]
 
 type Props = {
   beacons: Beacon[]
-  /** History to draw as paths + dots. Omit to show only latest positions. */
+  /**
+   * History to draw as paths + dots. Omit to show only latest positions. Noisy points are drawn
+   * as faint dots only: paths, pins and framing use the good ones.
+   */
   points?: Point[]
   selectedId?: number | null
   /** Change to re-frame the map around the data. */
@@ -55,6 +58,7 @@ export function TrackerMap({
   const byBeacon = useMemo(() => {
     const groups = new globalThis.Map<number, Point[]>()
     for (const p of points ?? []) {
+      if (p.noise) continue
       const list = groups.get(p.beacon_id)
       if (list) list.push(p)
       else groups.set(p.beacon_id, [p])
@@ -69,7 +73,10 @@ export function TrackerMap({
   )
 
   const frame = useMemo<[number, number][]>(() => {
-    if (points) return visiblePoints.map((p) => [p.longitude, p.latitude])
+    if (points)
+      return visiblePoints
+        .filter((p) => !p.noise)
+        .map((p) => [p.longitude, p.latitude])
     return beacons.flatMap((b) =>
       b.latest ? [[b.latest.longitude, b.latest.latitude]] : []
     ) as [number, number][]
