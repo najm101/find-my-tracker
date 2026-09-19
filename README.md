@@ -128,7 +128,7 @@ Images are published to `ghcr.io/najm101/find-my-tracker` for `linux/amd64` and 
 | Tag | What it is |
 | --- | --- |
 | `latest` | The newest release. Use this |
-| `0.1.0`, `0.1` | A specific release, if you want to pin |
+| `0.3.0`, `0.3` | A specific release, if you want to pin |
 | `edge` | Built from every push to `main`, including changes not yet released |
 
 To update: `docker compose pull && docker compose up -d`. Database migrations run automatically
@@ -140,6 +140,7 @@ on startup.
 | --- | --- | --- | --- |
 | `SECRET_KEY` | yes | | At least 32 characters. Encrypts the stored keys and signs the login cookie. **Back it up with `data/`.** Changing it makes stored keys unreadable |
 | `ADMIN_PASSWORD` | yes | | Dashboard password (at least 8 characters) |
+| `DATABASE_URL` | no | SQLite in `data/` | A PostgreSQL database instead, e.g. `postgresql://user:password@host:5432/tracker`. The schema is created on first start. There is no migration from an existing SQLite database |
 | `ANISETTE_URL` | no | built-in | An external [anisette](https://github.com/Dadoum/anisette-v3-server) server, only if the built-in provider stops working |
 | `PORT` | no | `8080` | |
 | `LOG_LEVEL` | no | `INFO` | |
@@ -148,7 +149,8 @@ on startup.
 ### Backups
 
 Everything lives in the mounted `data/` folder (`tracker.db` plus an anisette cache). Back up
-that folder together with your `SECRET_KEY`.
+that folder together with your `SECRET_KEY`. With `DATABASE_URL` set, back up that database
+instead (`pg_dump`); `data/` then only holds the anisette cache.
 
 ## Try it without an Apple account
 

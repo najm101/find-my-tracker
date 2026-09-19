@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     admin_password: SecretStr = Field(min_length=8)
 
     data_dir: Path = Path("/data")
+    # postgresql://user:password@host:5432/db. Unset: SQLite at data_dir/tracker.db.
+    database_url: str | None = None
     static_dir: Path | None = None
     anisette_url: str | None = None
 

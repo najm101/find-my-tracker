@@ -36,3 +36,6 @@ docs/PLAN.md
 spike/
 /pyproject.toml
 /uv.lock
+
+# Local Dokploy credentials and API docs
+.dockploy-local/

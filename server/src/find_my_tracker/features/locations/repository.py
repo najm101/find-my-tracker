@@ -2,17 +2,18 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sqlalchemy import Select, column, func, select, table
-from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy import ColumnElement, Select, and_, column, func, select, table
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from find_my_tracker.core.database import insert_for
 from find_my_tracker.features.locations.geo import BBox
 from find_my_tracker.features.locations.models import Location
 
-# SQLite caps bound parameters per statement; 10 columns x 500 rows stays well under it.
+# Both databases cap bound parameters per statement; 10 columns x 500 rows stays well under.
 _CHUNK = 500
 
-# The R*Tree virtual table (created in migration 0001, maintained by triggers).
+# SQLite only: the R*Tree virtual table (created in migration 0001, maintained by triggers).
+# PostgreSQL filters on an ordinary (latitude, longitude) index instead.
 _rtree = table(
     "locations_rtree",
     column("id"),
@@ -33,7 +34,7 @@ class LocationRepository:
         for start in range(0, len(rows), _CHUNK):
             chunk = rows[start : start + _CHUNK]
             stmt = (
-                insert(Location)
+                insert_for(self._session, Location)
                 .values(list(chunk))
                 .on_conflict_do_nothing(index_elements=["beacon_id", "observed_at"])
                 .returning(Location.id)
@@ -57,17 +58,26 @@ class LocationRepository:
         if beacon_ids is not None:
             stmt = stmt.where(Location.beacon_id.in_(beacon_ids))
         if bbox is not None:
-            in_box = select(_rtree.c.id).where(
-                _rtree.c.min_lat >= bbox.min_lat,
-                _rtree.c.max_lat <= bbox.max_lat,
-                _rtree.c.min_lon >= bbox.min_lon,
-                _rtree.c.max_lon <= bbox.max_lon,
-            )
-            stmt = stmt.where(Location.id.in_(in_box))
+            stmt = stmt.where(self._in_box(bbox))
         stmt = stmt.order_by(Location.beacon_id, Location.observed_at)
         if limit is not None:
             stmt = stmt.limit(limit)
         return (await self._session.scalars(stmt)).all()
+
+    def _in_box(self, bbox: BBox) -> ColumnElement[bool]:
+        if self._session.get_bind().dialect.name == "sqlite":
+            return Location.id.in_(
+                select(_rtree.c.id).where(
+                    _rtree.c.min_lat >= bbox.min_lat,
+                    _rtree.c.max_lat <= bbox.max_lat,
+                    _rtree.c.min_lon >= bbox.min_lon,
+                    _rtree.c.max_lon <= bbox.max_lon,
+                )
+            )
+        return and_(
+            Location.latitude.between(bbox.min_lat, bbox.max_lat),
+            Location.longitude.between(bbox.min_lon, bbox.max_lon),
+        )
 
     async def latest_by_beacon(self, beacon_ids: Sequence[int]) -> dict[int, Location]:
         if not beacon_ids:

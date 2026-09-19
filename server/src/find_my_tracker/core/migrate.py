@@ -7,18 +7,17 @@ from pathlib import Path
 from alembic import command
 from alembic.config import Config
 
-from find_my_tracker.core.database import sqlite_url
-
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 
 
-def alembic_config(db_path: Path) -> Config:
+def alembic_config(url: str) -> Config:
     cfg = Config()
     cfg.set_main_option("script_location", str(MIGRATIONS_DIR))
-    cfg.set_main_option("sqlalchemy.url", sqlite_url(db_path, driver="pysqlite"))
+    # ConfigParser interpolation would choke on `%` in URL-encoded passwords.
+    cfg.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
     return cfg
 
 
-def upgrade_database(db_path: Path) -> None:
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-    command.upgrade(alembic_config(db_path), "head")
+def upgrade_database(url: str) -> None:
+    """Run in a worker thread: the migration environment starts its own event loop."""
+    command.upgrade(alembic_config(url), "head")

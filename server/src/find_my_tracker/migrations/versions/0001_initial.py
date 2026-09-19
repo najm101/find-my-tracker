@@ -88,8 +88,12 @@ def upgrade() -> None:
         sa.Column("value", sa.Text(), nullable=False),
     )
 
-    # Spatial index for map-area and near-a-place queries. Kept in sync by triggers so no
-    # application code can forget it. `id` mirrors locations.id.
+    # Spatial index for map-area and near-a-place queries. SQLite: an R*Tree kept in sync by
+    # triggers so no application code can forget it (`id` mirrors locations.id). PostgreSQL
+    # (added later; SQLite databases are unaffected): a plain composite index.
+    if op.get_bind().dialect.name != "sqlite":
+        op.create_index("ix_locations_lat_lon", "locations", ["latitude", "longitude"])
+        return
     op.execute(
         "CREATE VIRTUAL TABLE locations_rtree USING rtree(id, min_lat, max_lat, min_lon, max_lon)"
     )
@@ -111,9 +115,12 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("DROP TRIGGER IF EXISTS locations_rtree_delete")
-    op.execute("DROP TRIGGER IF EXISTS locations_rtree_insert")
-    op.execute("DROP TABLE IF EXISTS locations_rtree")
+    if op.get_bind().dialect.name == "sqlite":
+        op.execute("DROP TRIGGER IF EXISTS locations_rtree_delete")
+        op.execute("DROP TRIGGER IF EXISTS locations_rtree_insert")
+        op.execute("DROP TABLE IF EXISTS locations_rtree")
+    else:
+        op.drop_index("ix_locations_lat_lon", "locations")
     op.drop_table("settings")
     op.drop_index("ix_locations_beacon_time", "locations")
     op.drop_table("locations")

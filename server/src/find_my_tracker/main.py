@@ -12,7 +12,7 @@ from find_my_tracker.core.clock import Clock
 from find_my_tracker.core.config import Settings, get_settings
 from find_my_tracker.core.container import Container
 from find_my_tracker.core.crypto import SecretBox
-from find_my_tracker.core.database import Database
+from find_my_tracker.core.database import Database, resolve_database_url
 from find_my_tracker.core.errors import install_error_handlers
 from find_my_tracker.core.migrate import upgrade_database
 from find_my_tracker.core.spa import mount_spa
@@ -52,7 +52,7 @@ def build_container(
 ) -> Container:
     clock = clock or Clock()
     secret = settings.secret_key.get_secret_value()
-    db = Database(settings.database_path)
+    db = Database(resolve_database_url(settings.database_url, settings.database_path))
     secrets = SecretBox(secret)
     apple = apple or _default_apple_factory(settings)
     poll_service = PollService(db, apple, secrets, clock)
@@ -84,7 +84,7 @@ def create_app(settings: Settings | None = None, container: Container | None = N
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         settings.data_dir.mkdir(parents=True, exist_ok=True)
-        await asyncio.to_thread(upgrade_database, settings.database_path)
+        await asyncio.to_thread(upgrade_database, container.db.url)
         await container.device_identity.load()
         container.poller.start()
         try:
