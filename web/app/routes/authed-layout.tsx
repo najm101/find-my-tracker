@@ -5,7 +5,14 @@ import {
   MapPinnedIcon,
   RadarIcon,
 } from "lucide-react"
-import { useEffect } from "react"
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react"
+import { createPortal } from "react-dom"
 import {
   Link,
   NavLink,
@@ -43,7 +50,9 @@ import { getAccount } from "~/features/apple-account/api/account"
 import { isAuthenticated, logout } from "~/features/auth/api/auth"
 import { listBeacons } from "~/features/beacons/api/beacons"
 import { BeaconNav } from "~/features/beacons/components/beacon-nav"
+import { MapStage } from "~/features/map/components/map-stage"
 import { getTrackingStatus } from "~/features/tracking/api/tracking"
+import { RefreshButton } from "~/features/tracking/components/refresh-button"
 import { TrackingStatus } from "~/features/tracking/components/tracking-status"
 import { getHidden, withHiddenToggled } from "~/lib/search-params"
 
@@ -75,6 +84,9 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
   const hidden = getHidden(params)
   const activeId =
     Number(location.pathname.match(/^\/beacons\/(\d+)/)?.[1]) || null
+  const onMap = location.pathname !== "/setup"
+  const connected = account.status !== "none"
+  const [panelSlot, setPanelSlot] = useState<HTMLElement | null>(null)
 
   // Keep the status and positions fresh: closely while a check runs, else every minute.
   useEffect(() => {
@@ -136,9 +148,6 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
           />
         </SidebarContent>
         <SidebarFooter>
-          {account.status !== "none" && (
-            <TrackingStatus status={status} now={loadedAt} />
-          )}
           <Button
             variant="ghost"
             size="sm"
@@ -173,10 +182,49 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
               </Alert>
             </div>
           )}
-        <Outlet />
+        {onMap ? (
+          <PanelSlot.Provider value={panelSlot}>
+            <div className="flex h-svh w-full flex-col md:flex-row">
+              <div className="relative min-h-0 flex-1">
+                <MapStage
+                  className="absolute inset-0"
+                  controls={
+                    connected && (
+                      <RefreshButton status={status} now={loadedAt} />
+                    )
+                  }
+                  status={
+                    connected && (
+                      <TrackingStatus status={status} now={loadedAt} />
+                    )
+                  }
+                >
+                  <Outlet />
+                </MapStage>
+              </div>
+              <div
+                ref={setPanelSlot}
+                className="flex max-h-[55svh] min-h-0 empty:hidden md:max-h-none"
+              />
+            </div>
+          </PanelSlot.Provider>
+        ) : (
+          <Outlet />
+        )}
       </SidebarInset>
     </SidebarProvider>
   )
+}
+
+const PanelSlot = createContext<HTMLElement | null>(null)
+
+/**
+ * A page's side panel, beside the shared map (below it on phones). Pages render inside the map,
+ * so this portals out to the slot the layout keeps next to it; the map shrinks to make room.
+ */
+export function SidePanel({ children }: { children: ReactNode }) {
+  const slot = useContext(PanelSlot)
+  return slot ? createPortal(children, slot) : null
 }
 
 /** Data every signed-in page shares (beacons, tracking status), loaded once by the layout. */

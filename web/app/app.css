@@ -49,14 +49,21 @@
 }
 
 :root {
+    /*
+     * Theme seed: Apple's systemGreen, the Find My tint (#34C759 light, #30D158 dark).
+     * Brand tokens below derive from it, so a new shadcn component picks it up through
+     * --primary / --ring / --sidebar-primary / --chart-*. Change the seed to re-theme.
+     * White on this green is 2.2:1, so text on it is a near-black of the same hue (8.9:1).
+     */
+    --seed: oklch(0.73 0.194 147.4);
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
+    --primary: var(--seed);
+    --primary-foreground: oklch(from var(--seed) 0.2 calc(c * 0.35) h);
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
     --muted: oklch(0.97 0 0);
@@ -66,32 +73,33 @@
     --destructive: oklch(0.577 0.245 27.325);
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --ring: var(--seed);
+    --chart-1: oklch(from var(--seed) 0.85 calc(c * 0.6) h);
+    --chart-2: var(--seed);
+    --chart-3: oklch(from var(--seed) 0.6 c h);
+    --chart-4: oklch(from var(--seed) 0.5 calc(c * 0.8) h);
+    --chart-5: oklch(from var(--seed) 0.4 calc(c * 0.6) h);
     --radius: 0.625rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
     --sidebar-accent: oklch(0.97 0 0);
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar-ring: var(--ring);
 }
 
 .dark {
+    --seed: oklch(0.756 0.208 147);
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
+    --primary: var(--seed);
+    --primary-foreground: oklch(from var(--seed) 0.2 calc(c * 0.35) h);
     --secondary: oklch(0.269 0 0);
     --secondary-foreground: oklch(0.985 0 0);
     --muted: oklch(0.269 0 0);
@@ -101,20 +109,20 @@
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --ring: var(--seed);
+    --chart-1: oklch(from var(--seed) 0.85 calc(c * 0.6) h);
+    --chart-2: var(--seed);
+    --chart-3: oklch(from var(--seed) 0.6 c h);
+    --chart-4: oklch(from var(--seed) 0.5 calc(c * 0.8) h);
+    --chart-5: oklch(from var(--seed) 0.4 calc(c * 0.6) h);
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
     --sidebar-accent: oklch(0.269 0 0);
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar-ring: var(--ring);
 }
 
 @layer base {

@@ -21,12 +21,7 @@ export function MapStylePicker({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon"
-          className="bg-background shadow-sm"
-          title="Map style"
-        >
+        <Button variant="outline" size="icon-sm" title="Map style">
           <LayersIcon />
           <span className="sr-only">Map style</span>
         </Button>

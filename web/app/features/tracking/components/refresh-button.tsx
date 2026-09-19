@@ -7,7 +7,7 @@ import { timeAgo } from "~/lib/format"
 
 import { useRefreshNow } from "../hooks/use-refresh-now"
 
-/** Prominent "check now" for the map. */
+/** "Check now", for the map's control group. */
 export function RefreshButton({
   status,
   now,
@@ -24,7 +24,7 @@ export function RefreshButton({
   return (
     <Button
       variant="outline"
-      className="bg-background shadow-sm"
+      size="sm"
       onClick={refresh}
       disabled={busy || cooling || status.account_status !== "active"}
       title={

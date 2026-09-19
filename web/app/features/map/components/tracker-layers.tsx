@@ -1,23 +1,22 @@
-import type { ReactNode } from "react"
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 
-import {
-  Map,
-  MapControls,
-  MapMarker,
-  MapRoute,
-  MarkerContent,
-} from "~/components/ui/map"
+import { MapMarker, MapRoute, MarkerContent, useMap } from "~/components/ui/map"
 import type { Schemas } from "~/lib/api/client"
-import { useMapStyle } from "~/lib/map-styles"
 
 import { BeaconMarker } from "./beacon-marker"
-import { FitToData } from "./fit-to-data"
-import { MapStylePicker } from "./map-style-picker"
+import { FitToData, moveTo } from "./fit-to-data"
 import { SightingsLayer } from "./sightings-layer"
 
 type Beacon = Schemas["BeaconOut"]
 type Point = Schemas["LocationPoint"]
+
+export type MapFocus = {
+  latitude: number
+  longitude: number
+  key: string
+  /** Move the map to it. False when it was picked on the map, where it's already in view. */
+  move: boolean
+}
 
 type Props = {
   beacons: Beacon[]
@@ -29,28 +28,30 @@ type Props = {
   selectedId?: number | null
   /** Change to re-frame the map around the data. */
   fitKey: string
-  /** A single sighting to fly to and ring (e.g. picked from a timeline). */
-  focus?: { latitude: number; longitude: number; key: string } | null
+  /** Frame these instead of the data. */
+  frameAround?: [number, number][]
+  /** Room to leave around the frame, e.g. for a panel floating over the map. */
+  framePadding?:
+    number | { top: number; bottom: number; left: number; right: number }
+  /** A sighting (or stay) to ring, e.g. picked from a timeline. */
+  focus?: MapFocus | null
+  /** Called when a history dot is clicked. */
+  onPick?: (point: Point) => void
   now: number
-  className?: string
-  /** Extra controls shown top-right, next to the style picker (e.g. a refresh button). */
-  controls?: ReactNode
-  children?: ReactNode
 }
 
-/** The map of beacons: latest-position markers, plus paths when history is given. */
-export function TrackerMap({
+/** What a map page draws on the shared map: latest markers, plus paths when history is given. */
+export function TrackerLayers({
   beacons,
   points,
   selectedId,
   fitKey,
+  frameAround,
+  framePadding,
   focus,
+  onPick,
   now,
-  className,
-  controls,
-  children,
 }: Props) {
-  const mapStyle = useMapStyle()
   const colors = useMemo(
     () => new globalThis.Map(beacons.map((b) => [b.id, b.color ?? "#2563eb"])),
     [beacons]
@@ -83,17 +84,7 @@ export function TrackerMap({
   }, [points, visiblePoints, beacons])
 
   return (
-    <Map
-      className={className}
-      center={[0, 20]}
-      zoom={1.5}
-      styles={mapStyle.styles}
-    >
-      <MapControls position="bottom-right" showZoom showCompass showLocate />
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
-        {controls}
-        <MapStylePicker value={mapStyle.id} onChange={mapStyle.setId} />
-      </div>
+    <>
       {points && (
         <>
           {beacons.map((b) => {
@@ -111,7 +102,11 @@ export function TrackerMap({
               />
             )
           })}
-          <SightingsLayer points={visiblePoints} colors={colors} />
+          <SightingsLayer
+            points={visiblePoints}
+            colors={colors}
+            onPick={onPick}
+          />
         </>
       )}
       {beacons.map((b) => {
@@ -129,21 +124,35 @@ export function TrackerMap({
           />
         )
       })}
-      <FitToData coordinates={frame} fitKey={fitKey} />
+      <FitToData
+        coordinates={frameAround ?? frame}
+        fitKey={fitKey}
+        padding={framePadding}
+      />
       {focus && (
         <>
           <MapMarker longitude={focus.longitude} latitude={focus.latitude}>
             <MarkerContent>
-              <div className="size-5 rounded-full border-4 border-foreground bg-background shadow-md" />
+              <div className="pointer-events-none size-5 rounded-full border-4 border-foreground bg-background shadow-md" />
             </MarkerContent>
           </MapMarker>
-          <FitToData
-            coordinates={[[focus.longitude, focus.latitude]]}
-            fitKey={focus.key}
-          />
+          {focus.move && <FlyToFocus focus={focus} />}
         </>
       )}
-      {children}
-    </Map>
+    </>
   )
+}
+
+/** Bring a picked sighting into view, closer if the map is zoomed far out. */
+function FlyToFocus({ focus }: { focus: MapFocus }) {
+  const { map, isLoaded } = useMap()
+  useEffect(() => {
+    if (!map || !isLoaded) return
+    moveTo(map, {
+      center: [focus.longitude, focus.latitude],
+      zoom: Math.max(map.getZoom(), 15),
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, isLoaded, focus.key])
+  return null
 }

@@ -1,5 +1,5 @@
 import { MapPinIcon, MapPinnedIcon, TriangleAlertIcon } from "lucide-react"
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 
 import {
   Empty,
@@ -35,12 +35,13 @@ type Props = {
   points: Point[]
   /** Collapse these into one row each. Pass none to list every report. */
   stays: Stay[]
-  selected?: string | null
+  /** The selected row. A new object each time something is picked, even the same row again. */
+  selection?: { key: string } | null
   onSelect: (target: TimelineTarget) => void
 }
 
 /** Sightings grouped by day, newest first. Stays show as one row. */
-export function DayTimeline({ points, stays, selected, onSelect }: Props) {
+export function DayTimeline({ points, stays, selection, onSelect }: Props) {
   const days = useMemo(() => {
     const entries: Entry[] = []
     const inStay = (p: Point) =>
@@ -100,13 +101,19 @@ export function DayTimeline({ points, stays, selected, onSelect }: Props) {
                 {e.kind === "stay" ? (
                   <StayRow
                     stay={e.stay}
-                    selected={selected === `stay-${e.stay.arrived_at}`}
+                    selection={
+                      selection?.key === `stay-${e.stay.arrived_at}`
+                        ? selection
+                        : null
+                    }
                     onSelect={onSelect}
                   />
                 ) : (
                   <PointRow
                     point={e.point}
-                    selected={selected === e.point.observed_at}
+                    selection={
+                      selection?.key === e.point.observed_at ? selection : null
+                    }
                     onSelect={onSelect}
                   />
                 )}
@@ -119,20 +126,33 @@ export function DayTimeline({ points, stays, selected, onSelect }: Props) {
   )
 }
 
+/** A ref that scrolls its row into view each time it is picked (e.g. on the map). */
+function useRevealWhenPicked(selection: object | null) {
+  const ref = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (selection)
+      ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+  }, [selection])
+  return ref
+}
+
 const ROW =
   "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
 
 function StayRow({
   stay,
-  selected,
+  selection,
   onSelect,
 }: {
   stay: Stay
-  selected: boolean
+  selection: object | null
   onSelect: (target: TimelineTarget) => void
 }) {
+  const selected = selection != null
+  const ref = useRevealWhenPicked(selection)
   return (
     <button
+      ref={ref}
       type="button"
       onClick={() =>
         onSelect({
@@ -141,9 +161,9 @@ function StayRow({
           key: `stay-${stay.arrived_at}`,
         })
       }
-      className={cn(ROW, "items-start", selected && "bg-muted")}
+      className={cn(ROW, "items-start", selected && "bg-primary/15")}
     >
-      <MapPinnedIcon className="mt-0.5 size-3.5 shrink-0 text-foreground" />
+      <MapPinnedIcon className="mt-0.5 size-3.5 shrink-0 text-primary" />
       <span className="flex min-w-0 flex-col">
         <span className="tabular-nums">
           {time(stay.arrived_at)} – {time(stay.left_at)}
@@ -161,16 +181,19 @@ function StayRow({
 
 function PointRow({
   point,
-  selected,
+  selection,
   onSelect,
 }: {
   point: Point
-  selected: boolean
+  selection: object | null
   onSelect: (target: TimelineTarget) => void
 }) {
+  const selected = selection != null
   const Icon = point.noise ? TriangleAlertIcon : MapPinIcon
+  const ref = useRevealWhenPicked(selection)
   return (
     <button
+      ref={ref}
       type="button"
       title={point.noise ? NOISE[point.noise] : undefined}
       onClick={() =>
@@ -180,7 +203,11 @@ function PointRow({
           key: point.observed_at,
         })
       }
-      className={cn(ROW, selected && "bg-muted", point.noise && "opacity-60")}
+      className={cn(
+        ROW,
+        selected && "bg-primary/15",
+        point.noise && "opacity-60"
+      )}
     >
       <Icon className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="shrink-0 tabular-nums">{time(point.observed_at)}</span>

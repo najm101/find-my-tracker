@@ -1,3 +1,4 @@
+import { MapPanel } from "~/components/map-panel"
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group"
 import type { MapMode } from "~/lib/search-params"
 import type { RangePreset, TimeRange } from "~/lib/time-range"
@@ -36,7 +37,7 @@ export function HistoryToolbar({
   onShowNoise,
 }: Props) {
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-background/95 p-1.5 shadow-sm backdrop-blur">
+    <MapPanel className="flex-wrap">
       <ToggleGroup
         type="single"
         size="sm"
@@ -66,6 +67,6 @@ export function HistoryToolbar({
           )}
         </>
       )}
-    </div>
+    </MapPanel>
   )
 }

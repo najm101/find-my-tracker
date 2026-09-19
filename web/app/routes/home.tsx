@@ -8,8 +8,7 @@ import {
 } from "~/components/ui/card"
 import { getLocations } from "~/features/history/api/locations"
 import { HistoryToolbar } from "~/features/history/components/history-toolbar"
-import { TrackerMap } from "~/features/map/components/tracker-map"
-import { RefreshButton } from "~/features/tracking/components/refresh-button"
+import { TrackerLayers } from "~/features/map/components/tracker-layers"
 import {
   getHidden,
   getMode,
@@ -40,7 +39,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { mode, range, history } = loaderData
-  const { beacons, status, loadedAt } = useLayoutData()
+  const { beacons, loadedAt } = useLayoutData()
   const [params, setParams] = useSearchParams()
   const hidden = getHidden(params)
   const visible = beacons.filter((b) => !hidden.has(b.id))
@@ -50,16 +49,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const good = shown?.filter((p) => !p.noise)
 
   return (
-    <div className="relative h-svh w-full">
-      <TrackerMap
-        className="absolute inset-0"
+    <>
+      <TrackerLayers
         beacons={visible}
         points={showNoise ? history?.points : good}
-        fitKey={`${mode}|${range.preset}|${range.preset === "custom" ? range.from.toISOString() : ""}`}
+        fitKey={`home|${mode}|${range.preset}|${range.preset === "custom" ? range.from.toISOString() : ""}`}
         now={loadedAt}
-        controls={<RefreshButton status={status} now={loadedAt} />}
       />
-      <div className="absolute top-3 left-14 z-10 md:left-3">
+      <div className="pointer-events-none absolute top-3 left-14 z-10 md:left-3">
         <HistoryToolbar
           mode={mode}
           range={range}
@@ -89,6 +86,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </CardHeader>
         </Card>
       )}
-    </div>
+    </>
   )
 }

@@ -1,5 +1,5 @@
 import type * as MapLibreGL from "maplibre-gl"
-import { useEffect, useId, useMemo } from "react"
+import { useEffect, useId, useMemo, useRef } from "react"
 
 import { useMap } from "~/components/ui/map"
 import type { Schemas } from "~/lib/api/client"
@@ -8,14 +8,16 @@ type Point = Schemas["LocationPoint"]
 
 /**
  * Every sighting as a small dot, coloured per beacon; noisy ones faint. A single circle layer,
- * because thousands of DOM markers would be far too slow.
+ * because thousands of DOM markers would be far too slow. Dots are clickable when `onPick` is set.
  */
 export function SightingsLayer({
   points,
   colors,
+  onPick,
 }: {
   points: Point[]
   colors: Map<number, string>
+  onPick?: (point: Point) => void
 }) {
   const { map, isLoaded } = useMap()
   const id = useId()
@@ -25,10 +27,11 @@ export function SightingsLayer({
   const data = useMemo<GeoJSON.FeatureCollection>(
     () => ({
       type: "FeatureCollection",
-      features: points.map((p) => ({
+      features: points.map((p, i) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [p.longitude, p.latitude] },
         properties: {
+          index: i,
           color: colors.get(p.beacon_id) ?? "#2563eb",
           noisy: p.noise != null,
         },
@@ -45,7 +48,7 @@ export function SightingsLayer({
       type: "circle",
       source: sourceId,
       paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2, 16, 5],
+        "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2.5, 16, 6],
         "circle-color": ["get", "color"],
         "circle-opacity": ["case", ["get", "noisy"], 0.3, 0.85],
         "circle-stroke-width": ["case", ["get", "noisy"], 0, 1],
@@ -69,6 +72,33 @@ export function SightingsLayer({
       data
     )
   }, [map, isLoaded, sourceId, data])
+
+  // Latest values for the click handler, without re-binding it on every render.
+  const pick = useRef({ onPick, points })
+  useEffect(() => {
+    pick.current = { onPick, points }
+  })
+
+  useEffect(() => {
+    if (!map || !isLoaded || !onPick) return
+    const click = (e: MapLibreGL.MapLayerMouseEvent) => {
+      const index = e.features?.[0]?.properties?.index
+      const point =
+        typeof index === "number" ? pick.current.points[index] : undefined
+      if (point) pick.current.onPick?.(point)
+    }
+    const enter = () => (map.getCanvas().style.cursor = "pointer")
+    const leave = () => (map.getCanvas().style.cursor = "")
+    map.on("click", layerId, click)
+    map.on("mouseenter", layerId, enter)
+    map.on("mouseleave", layerId, leave)
+    return () => {
+      map.off("click", layerId, click)
+      map.off("mouseenter", layerId, enter)
+      map.off("mouseleave", layerId, leave)
+      leave()
+    }
+  }, [map, isLoaded, layerId, onPick != null]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return null
 }
