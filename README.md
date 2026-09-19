@@ -125,7 +125,7 @@ Images are published to `ghcr.io/najm101/find-my-tracker` for `linux/amd64` and 
 | --- | --- |
 | `latest` | The newest release. Use this |
 | `0.1.0`, `0.1` | A specific release, if you want to pin |
-| `edge` | Built from every push to `main`. Untested between releases |
+| `edge` | Built from every push to `main`, including changes not yet released |
 
 To update: `docker compose pull && docker compose up -d`. Database migrations run automatically
 on startup.
@@ -208,6 +208,13 @@ After changing the API, regenerate the schema and the web types:
 
 Tests never call Apple. They use a fake Apple client with known answers. Issues and pull
 requests are welcome.
+
+### Releasing
+
+Releases are automatic. Every push to `main` runs the checks and publishes the `edge` image.
+When the `version` in `server/pyproject.toml` has no matching `v<version>` tag yet, the same run
+also publishes `<version>`, `<major>.<minor>` and `latest`, tags the commit, and creates the
+GitHub Release. To ship a new version, bump that number (for example `0.1.0` → `0.1.1`) and push.
 
 ## Credits 🙏
 
