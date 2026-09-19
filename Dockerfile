@@ -1,7 +1,9 @@
 # syntax=docker/dockerfile:1
 
 # ---- 1. Build the React app (static SPA). Node exists only in this stage. ----
-FROM node:24-alpine AS web
+# Always on the build machine's own platform: the output is the same static files for every
+# architecture, and running Vite under arm64 emulation hangs.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS web
 WORKDIR /web
 RUN npm install -g pnpm@12.4.2
 COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
