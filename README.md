@@ -14,11 +14,17 @@ Find My network on a schedule, keeps every location report in a local database, 
 full history on a map.
 
 > [!IMPORTANT]
-> **Beta.** It works day to day, but expect rough edges and breaking changes before 1.0. Read the [disclaimer](#%EF%B8%8F-disclaimer) before you sign in
-> with your Apple account.
+> **Expect gaps in the history.** Apple's network only reports an item while it is *away* from
+> your own Apple devices. An AirTag sitting next to your iPhone is connected to it, not
+> separated, so it stops broadcasting altogether and no passing iPhone can report it. You get
+> good history for trips and for items you have left somewhere, and thin or empty history for
+> the hours an item spends with you. Nothing running on a server can close that gap: it needs a
+> device physically near the item, which is how Apple's own Find My app hides it.
 
 > [!WARNING]
-> This project is not affiliated with, endorsed by, or supported by Apple Inc.
+> **Beta.** It works day to day, but expect rough edges and breaking changes before 1.0. This
+> project is not affiliated with, endorsed by, or supported by Apple Inc. Read the
+> [disclaimer](#%EF%B8%8F-disclaimer) before you sign in with your Apple account.
 
 |Map: History|Item history (dark)|Near a place|
 |----|----|----|
@@ -36,14 +42,18 @@ a home lab or a small always-on server, that job fits better there: this project
 the clock, keeps everything in one SQLite file you own, and gives you a web dashboard you can
 open from any device.
 
-If you just want to see your AirTags on Android and don't want to run a server, use
-OpenTagViewer. It's great.
+The two are complementary rather than rivals. A phone in your pocket can hear an item over
+Bluetooth and place it when Apple's network says nothing — the gap above — and OpenTagViewer
+1.1.0 does exactly that. A server can't, but it never sleeps, never runs out of battery and
+never misses a week because you forgot to open an app. If you just want to see your AirTags on
+Android and don't want to run a server, use OpenTagViewer. It's great.
 
 ## Features ⭐
 
 - **Latest location** of every item on a map, with light, dark, streets and satellite styles
 - **Full history**: every report Apple returns is stored, deduplicated, and kept indefinitely.
-  Apple only keeps about 7 days, so anything older exists only here
+  Apple only keeps about 7 days, so anything older exists only here. It is a record of where
+  your items were *seen*, not a continuous track
 - **History view** per item or for all items at once, by preset or custom date range, with
   a day-by-day list of sightings. Arrows show the direction of travel; click a dot to find it
   in the list, or a line to see how long that stretch took
@@ -69,11 +79,16 @@ app.
 | What | Works? | |
 | --- | --- | --- |
 | **AirTag** | ✅ | What this is built for |
-| **Third-party Find My trackers** (Chipolo, Pebblebee, eufy and similar) | ✅ | Should work. They may show up labeled as AirTags |
-| **AirPods and other Find My accessories** | ✅ | Where Apple stores a usable key for them. Lightly tested |
-| **Your own iPhone, iPad, Mac or Watch** | ⚠️ | Listed, but not selected by default: tracking them tracks a person. Coverage is partial |
+| **Third-party Find My trackers** (Chipolo, Pebblebee, eufy and similar) | ✅ | May show up labeled as AirTags |
+| **AirPods and other Find My accessories** | ✅ | Where Apple stores a usable key. Lightly tested |
+| **Your own iPhone, iPad, Mac or Watch** | ⚠️ | Listed, not selected by default: tracking them tracks a person. Coverage is partial |
 | **An item someone shared with you** | ❌ | Only the account that owns an item can read its keys |
 | **Tile, Samsung SmartTag, Google Find My Device trackers** | ❌ | Different networks, nothing in common with Apple's |
+
+Sharing an item *you own* with someone in Find My doesn't get in the way, and usually helps. The
+silence described above applies only to devices on **your** Apple account, so an item travelling
+with the person you shared it with is separated, broadcasting, and reported normally — with a
+guaranteed iPhone right beside it the whole way.
 
 ## ⚠️ Disclaimer
 
@@ -85,12 +100,17 @@ app.
   author and contributors are **not responsible** for anything that happens to your Apple
   account, your devices, or your data. If you can't accept that risk, don't use this.
   Consider using a secondary Apple account if you are worried.
+- **Not a safety product.** Do not use this to keep track of a child, an elderly relative, or
+  anyone whose safety depends on it, and do not rely on it in an emergency, to find stolen
+  property, or for anything else that matters. Location comes from strangers' phones happening
+  to walk past your item: coverage has holes, it is street-level at best, it lags by 30 minutes
+  or more, it goes quiet whenever the item is near you, and Apple can break the whole thing
+  overnight. If someone's safety is involved, buy a product built and supported for that.
 - **Apple can break it at any time.** It relies on reverse-engineered protocols. When Apple
   changes something, it stops working until upstream libraries catch up. There is no guarantee
   it will ever work again.
 - **No warranty.** This is beta software provided "as is", without warranty of any kind (see the
-  [MIT License](./LICENSE)). Don't rely on it for anything important, such as finding stolen
-  property or anything safety-related.
+  [MIT License](./LICENSE)).
 - **Your server holds keys that can locate your items.** The database stores your item keys,
   your Apple session (including your Apple ID password), and iCloud Keychain keys, all encrypted
   with your `SECRET_KEY`. Anyone who gets the `data/` folder **and** `SECRET_KEY` can locate your
@@ -121,18 +141,9 @@ docker compose up -d
 Open `http://<your-server>:8080`, log in with `ADMIN_PASSWORD`, and follow the sign-in wizard.
 The first check runs right away and brings in about the last 7 days of history.
 
-### Image tags
-
 Images are published to `ghcr.io/najm101/find-my-tracker` for `linux/amd64` and `linux/arm64`.
-
-| Tag | What it is |
-| --- | --- |
-| `latest` | The newest release. Use this |
-| `0.3.0`, `0.3` | A specific release, if you want to pin |
-| `edge` | Built from every push to `main`, including changes not yet released |
-
-To update: `docker compose pull && docker compose up -d`. Database migrations run automatically
-on startup.
+Use `latest`, or pin a release (`0.3.1`, `0.3`); `edge` is built from every push to `main`. To
+update: `docker compose pull && docker compose up -d`. Migrations run automatically on startup.
 
 ### Configuration
 
@@ -146,18 +157,15 @@ on startup.
 | `LOG_LEVEL` | no | `INFO` | |
 | `DEMO_MODE` | no | `false` | Fake Apple account with demo data. See below |
 
-### Backups
-
-Everything lives in the mounted `data/` folder (`tracker.db` plus an anisette cache). Back up
-that folder together with your `SECRET_KEY`. With `DATABASE_URL` set, back up that database
-instead (`pg_dump`); `data/` then only holds the anisette cache.
+Everything lives in the mounted `data/` folder (`tracker.db` plus an anisette cache): back it up
+together with your `SECRET_KEY`. With `DATABASE_URL` set, back up that database instead
+(`pg_dump`), and `data/` then only holds the anisette cache.
 
 ## Try it without an Apple account
 
 Set `DEMO_MODE=true` and the server talks to a fake Apple instead of the real one. In the wizard,
 use any Apple ID and password, the code `123456`, and the passcode `1234`. You get five items
-following two weeks of made-up routines around Amsterdam (bike commutes, a train day trip to
-Haarlem, a weekend in Lisbon). Real Apple servers are never contacted in demo mode.
+following two weeks of made-up routines around Amsterdam. Real Apple servers are never contacted.
 
 ```bash
 docker run --rm -p 8080:8080 -e DEMO_MODE=true \
@@ -165,62 +173,10 @@ docker run --rm -p 8080:8080 -e DEMO_MODE=true \
   ghcr.io/najm101/find-my-tracker:latest
 ```
 
-## How it works
+## Contributing
 
-```
-one container: uvicorn → FastAPI
-  ├─ /api/*     JSON API (admin cookie session)
-  ├─ /*         the React dashboard (static build)
-  └─ poller     background task: fetch reports from Apple → SQLite
-/data           tracker.db (SQLite, WAL) + anisette cache
-```
-
-The Apple side is handled by [FindMy.py](https://github.com/malmeloo/FindMy.py). The wizard signs
-in, unlocks the item keys from iCloud Keychain, and stores them encrypted. From then on, the
-poller asks Apple for the encrypted location reports of each item, decrypts them locally, and
-stores them. Apple never sees your decrypted locations. Only this server does.
-
-## Development
-
-Requirements: [uv](https://docs.astral.sh/uv/), Node ≥ 22.22, pnpm.
-
-```bash
-# API on :8080
-cd server
-uv sync
-SECRET_KEY=$(openssl rand -base64 48) ADMIN_PASSWORD=devpassword DATA_DIR=../data/dev \
-  DEMO_MODE=true uv run python -m find_my_tracker
-
-# Web on :5173 (proxies /api to :8080)
-cd web
-pnpm install
-pnpm dev
-```
-
-Checks (the same ones CI runs):
-
-```bash
-cd server && uv run ruff check . && uv run ruff format --check . && uv run basedpyright && uv run pytest
-cd web && pnpm lint && pnpm format:check && pnpm typecheck && pnpm build
-```
-
-```
-server/   FastAPI + poller (Python 3.14, feature-first: src/find_my_tracker/features/*)
-web/      React Router SPA + shadcn/ui (feature-first: app/features/*)
-```
-
-After changing the API, regenerate the schema and the web types:
-`cd server && uv run python -m find_my_tracker.openapi > openapi.json && cd ../web && pnpm api:types`.
-
-Tests never call Apple. They use a fake Apple client with known answers. Issues and pull
-requests are welcome.
-
-### Releasing
-
-Releases are automatic. Every push to `main` runs the checks and publishes the `edge` image.
-When the `version` in `server/pyproject.toml` has no matching `v<version>` tag yet, the same run
-also publishes `<version>`, `<major>.<minor>` and `latest`, tags the commit, and creates the
-GitHub Release. To ship a new version, bump that number (for example `0.1.0` → `0.1.1`) and push.
+Running it from source, the layout, the checks CI runs and how releases work are all in
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Issues and pull requests are welcome.
 
 ## Credits 🙏
 
@@ -231,13 +187,12 @@ GitHub Release. To ship a new version, bump that number (for example `0.1.0` →
   the actual talking to Apple. This project currently uses
   [parawanderer's fork](https://github.com/parawanderer/FindMy.py) for iCloud Keychain export
 - [**OpenHaystack**](https://github.com/seemoo-lab/openhaystack) by SEEMOO Lab: the research
-  that made all of this possible
-- [anisette-v3-server](https://github.com/Dadoum/anisette-v3-server) by Dadoum, the optional
-  external anisette provider
+  that made all of this possible, and [anisette-v3-server](https://github.com/Dadoum/anisette-v3-server)
+  by Dadoum for the optional external anisette provider
 - [shadcn/ui](https://ui.shadcn.com), [mapcn](https://mapcn.dev) and
-  [MapLibre GL JS](https://maplibre.org) for the dashboard
-- Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, served by
-  [OpenFreeMap](https://openfreemap.org). Satellite imagery by Esri
+  [MapLibre GL JS](https://maplibre.org) for the dashboard. Map data ©
+  [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, served by
+  [OpenFreeMap](https://openfreemap.org); satellite imagery by Esri
 - Built with a lot of help from [Claude](https://claude.ai) (Anthropic) as a coding assistant
 
 ## License

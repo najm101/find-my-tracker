@@ -254,7 +254,8 @@ function SegmentDetails({ segment }: { segment: Segment }) {
       {gap ? (
         <span className="text-muted-foreground">
           No reports for {duration(seconds)} · {distance(meters)} apart. The way
-          it went isn&apos;t known.
+          it went isn&apos;t known. Long gaps often mean the item was with you:
+          Apple stops reporting it near your own devices.
         </span>
       ) : (
         <span className="text-muted-foreground tabular-nums">

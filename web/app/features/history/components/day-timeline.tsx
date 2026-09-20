@@ -83,7 +83,9 @@ export function DayTimeline({ points, stays, selection, onSelect }: Props) {
         <EmptyHeader>
           <EmptyTitle>No sightings in this range</EmptyTitle>
           <EmptyDescription>
-            Try a longer range, or wait for the next check.
+            Apple only reports an item while it is away from your own Apple
+            devices, so quiet stretches are normal. Try a longer range, or wait
+            for the next check.
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
