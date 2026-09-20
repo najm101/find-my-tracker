@@ -56,7 +56,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         fitKey={`home|${mode}|${range.preset}|${range.preset === "custom" ? range.from.toISOString() : ""}`}
         now={loadedAt}
       />
-      <div className="pointer-events-none absolute top-3 left-14 z-10 md:left-3">
+      <div className="pointer-events-none absolute top-3 left-3 z-10">
         <HistoryToolbar
           mode={mode}
           range={range}

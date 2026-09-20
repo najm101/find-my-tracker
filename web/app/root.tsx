@@ -1,4 +1,5 @@
 import { ThemeProvider } from "next-themes"
+import { useEffect } from "react"
 import {
   Links,
   Meta,
@@ -24,7 +25,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* viewport-fit=cover lets env(safe-area-inset-*) report real values, which the
+            bottom tab bar needs to clear the home indicator when installed. */}
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        {/* Tints the phone's status bar to match whichever theme is showing. */}
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: light)"
+          content="#ffffff"
+        />
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: dark)"
+          content="#0a0a0a"
+        />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="Find My" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
         <Meta />
         <Links />
       </head>
@@ -46,12 +72,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useServiceWorker()
   return (
     <TooltipProvider>
       <Outlet />
       <Toaster />
     </TooltipProvider>
   )
+}
+
+/**
+ * Registers the (deliberately cache-free) service worker, which is what lets a phone install
+ * the dashboard to its home screen. Nothing else depends on it, so a refusal is not an error
+ * worth showing: browsers block registration over plain HTTP on a non-localhost address, which
+ * is exactly the setup someone still has before they put TLS in front of it.
+ */
+function useServiceWorker() {
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return
+    void navigator.serviceWorker.register("/sw.js").catch(() => {})
+  }, [])
 }
 
 // Shown while the first client loader runs (SPA mode has no server render).

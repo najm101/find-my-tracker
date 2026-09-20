@@ -18,6 +18,9 @@ def main() -> None:
         port=settings.port,
         log_level=settings.log_level.lower(),
         proxy_headers=True,
+        # Without this the client IP behind a reverse proxy is the proxy's, so every
+        # visitor shares one login rate-limit bucket. See TRUSTED_PROXIES in the README.
+        forwarded_allow_ips=settings.forwarded_allow_ips,
     )
 
 

@@ -154,7 +154,10 @@ export interface paths {
     }
     get?: never
     put?: never
-    /** Login */
+    /**
+     * Login
+     * @description Step one. With two-factor on, this only issues a short-lived ticket for `/auth/mfa`.
+     */
     post: operations["login_api_auth_login_post"]
     delete?: never
     options?: never
@@ -190,6 +193,157 @@ export interface paths {
     get: operations["me_api_auth_me_get"]
     put?: never
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/auth/mfa": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Submit Mfa
+     * @description Step two: a six-digit authenticator code, or one recovery code.
+     */
+    post: operations["submit_mfa_api_auth_mfa_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/auth/password": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Change Password
+     * @description Changing the password signs every other browser out. This one stays signed in.
+     */
+    post: operations["change_password_api_auth_password_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/auth/recovery-codes": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Regenerate Recovery Codes
+     * @description Replace every unused recovery code with a fresh set.
+     */
+    post: operations["regenerate_recovery_codes_api_auth_recovery_codes_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/auth/security": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Security */
+    get: operations["security_api_auth_security_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/auth/sessions/revoke": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Revoke Sessions
+     * @description Log out everywhere, including here.
+     */
+    post: operations["revoke_sessions_api_auth_sessions_revoke_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/auth/totp/confirm": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Confirm Totp */
+    post: operations["confirm_totp_api_auth_totp_confirm_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/auth/totp/disable": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Disable Totp */
+    post: operations["disable_totp_api_auth_totp_disable_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/auth/totp/setup": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Start Totp
+     * @description Mint a secret to scan. It does nothing until `/auth/totp/confirm` proves it arrived.
+     */
+    post: operations["start_totp_api_auth_totp_setup_post"]
     delete?: never
     options?: never
     head?: never
@@ -517,7 +671,7 @@ export interface components {
        */
       status: "ok"
       /** Version */
-      version: string
+      version?: string | null
     }
     /** ImportRequest */
     ImportRequest: {
@@ -570,10 +724,41 @@ export interface components {
       /** Truncated */
       truncated: boolean
     }
+    /** LoginAttemptOut */
+    LoginAttemptOut: {
+      /**
+       * At
+       * Format: date-time
+       */
+      at: string
+      /** Client Ip */
+      client_ip: string
+      outcome: components["schemas"]["LoginOutcome"]
+      /** User Agent */
+      user_agent: string | null
+    }
+    /**
+     * LoginOutcome
+     * @enum {string}
+     */
+    LoginOutcome:
+      | "success"
+      | "wrong_password"
+      | "wrong_code"
+      | "recovery_used"
+      | "rate_limited"
     /** LoginRequest */
     LoginRequest: {
       /** Password */
       password: string
+    }
+    /** LoginResponse */
+    LoginResponse: {
+      /**
+       * Mfa Required
+       * @description Post the authenticator code to /auth/mfa to finish.
+       */
+      mfa_required: boolean
     }
     /** MeResponse */
     MeResponse: {
@@ -594,11 +779,34 @@ export interface components {
       /** Method Id */
       method_id: number
     }
+    /** MfaRequest */
+    MfaRequest: {
+      /**
+       * Code
+       * @description A six-digit authenticator code, or one recovery code.
+       */
+      code: string
+    }
     /**
      * Noise
      * @enum {string}
      */
     Noise: "spike" | "too_fast" | "imprecise"
+    /** PasswordChange */
+    PasswordChange: {
+      /** Current Password */
+      current_password: string
+      /** New Password */
+      new_password: string
+    }
+    /**
+     * PasswordConfirm
+     * @description Re-entering the password guards changes to the second factor.
+     */
+    PasswordConfirm: {
+      /** Password */
+      password: string
+    }
     /**
      * PollOutcome
      * @enum {string}
@@ -631,6 +839,28 @@ export interface components {
      * @enum {string}
      */
     PollTrigger: "schedule" | "manual"
+    /** RecoveryCodes */
+    RecoveryCodes: {
+      /**
+       * Codes
+       * @description Shown once. They cannot be retrieved again.
+       */
+      codes: string[]
+    }
+    /** SecurityStatus */
+    SecurityStatus: {
+      /**
+       * Password Changed At
+       * Format: date-time
+       */
+      password_changed_at: string
+      /** Recent Attempts */
+      recent_attempts: components["schemas"]["LoginAttemptOut"][]
+      /** Recovery Codes Remaining */
+      recovery_codes_remaining: number
+      /** Totp Enabled */
+      totp_enabled: boolean
+    }
     /** SettingsUpdate */
     SettingsUpdate: {
       /** Poll Interval Minutes */
@@ -666,6 +896,21 @@ export interface components {
       longitude: number
       /** Point Count */
       point_count: number
+    }
+    /** TotpSetup */
+    TotpSetup: {
+      /**
+       * Qr Data Uri
+       * @description The same URI as an SVG QR code, for an <img src>.
+       */
+      qr_data_uri: string
+      /**
+       * Secret
+       * @description Type this into the app if the QR code cannot be scanned.
+       */
+      secret: string
+      /** Uri */
+      uri: string
     }
     /** TrackingStatus */
     TrackingStatus: {
@@ -1065,11 +1310,13 @@ export interface operations {
     }
     responses: {
       /** @description Successful Response */
-      204: {
+      200: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          "application/json": components["schemas"]["LoginResponse"]
+        }
       }
       /** @description Validation Error */
       422: {
@@ -1116,6 +1363,223 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["MeResponse"]
+        }
+      }
+    }
+  }
+  submit_mfa_api_auth_mfa_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MfaRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  change_password_api_auth_password_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordChange"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  regenerate_recovery_codes_api_auth_recovery_codes_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordConfirm"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RecoveryCodes"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  security_api_auth_security_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["SecurityStatus"]
+        }
+      }
+    }
+  }
+  revoke_sessions_api_auth_sessions_revoke_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  confirm_totp_api_auth_totp_confirm_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MfaRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RecoveryCodes"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  disable_totp_api_auth_totp_disable_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordConfirm"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  start_totp_api_auth_totp_setup_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["TotpSetup"]
         }
       }
     }

@@ -8,6 +8,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+#: Python's mimetypes module does not know these, and a wrong type means the browser ignores
+#: the file: a manifest served as octet-stream is not read, so the app cannot be installed.
+MEDIA_TYPES = {".webmanifest": "application/manifest+json", ".js": "text/javascript"}
+
 
 def mount_spa(app: FastAPI, static_dir: Path) -> None:
     index = static_dir / "index.html"
@@ -23,5 +27,11 @@ def mount_spa(app: FastAPI, static_dir: Path) -> None:
             raise HTTPException(status_code=404)
         candidate = (static_dir / path).resolve()
         if path and candidate.is_file() and candidate.is_relative_to(root):
-            return FileResponse(candidate)
+            headers = None
+            if candidate.name == "sw.js":
+                # A cached service worker would outlive the deploy that replaced it.
+                headers = {"cache-control": "no-cache"}
+            return FileResponse(
+                candidate, media_type=MEDIA_TYPES.get(candidate.suffix), headers=headers
+            )
         return FileResponse(index)

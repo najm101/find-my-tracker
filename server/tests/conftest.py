@@ -11,7 +11,7 @@ from find_my_tracker.core.container import Container
 from find_my_tracker.integrations.apple.fake import FakeAppleClientFactory
 from find_my_tracker.main import build_container, create_app
 
-ADMIN_PASSWORD = "test-password"
+ADMIN_PASSWORD = "test-password-12"
 
 
 @pytest.fixture
@@ -42,7 +42,9 @@ def client(settings: Settings, container: Container) -> Iterator[TestClient]:
 
 @pytest.fixture
 def admin(client: TestClient) -> TestClient:
-    assert client.post("/api/auth/login", json={"password": ADMIN_PASSWORD}).status_code == 204
+    res = client.post("/api/auth/login", json={"password": ADMIN_PASSWORD})
+    assert res.status_code == 200, res.text
+    assert res.json() == {"mfa_required": False}
     return client
 
 

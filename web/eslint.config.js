@@ -28,6 +28,11 @@ const featureZones = features.map((name) => ({
 
 export default tseslint.config(
   { ignores: ["build/", ".react-router/", "app/components/ui/", "app/lib/api/schema.d.ts"] },
+  // The service worker runs in its own global scope, not the window.
+  {
+    files: ["public/sw.js"],
+    languageOptions: { globals: globals.serviceworker },
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

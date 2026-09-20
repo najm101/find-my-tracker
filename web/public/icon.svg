@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Find My Tracker">
+  <rect width="512" height="512" fill="#34C759"/>
+  <g transform="translate(256 256) scale(0.78) translate(-256 -256)" fill="#0D2B17">
+    <path d="M256 96c-66.3 0-120 53.7-120 120 0 31.9 14.9 66.5 37.9 99.9 22.8 33.1 52.6 63.8 77.9 86.9a6 6 0 0 0 8.4 0c25.3-23.1 55.1-53.8 77.9-86.9C361.1 282.5 376 247.9 376 216c0-66.3-53.7-120-120-120zm0 169a49 49 0 1 1 0-98 49 49 0 0 1 0 98z"/>
+  </g>
+</svg>

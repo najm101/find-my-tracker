@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from find_my_tracker.core.clock import Clock
 from find_my_tracker.core.config import Settings, get_settings
@@ -15,12 +16,13 @@ from find_my_tracker.core.crypto import SecretBox
 from find_my_tracker.core.database import Database, resolve_database_url
 from find_my_tracker.core.errors import install_error_handlers
 from find_my_tracker.core.migrate import upgrade_database
+from find_my_tracker.core.security import ContentSecurityPolicy, SecurityHeadersMiddleware
 from find_my_tracker.core.spa import mount_spa
 from find_my_tracker.features.apple_account.identity import DeviceIdentityService
 from find_my_tracker.features.apple_account.router import router as apple_router
 from find_my_tracker.features.apple_account.wizard import WizardManager
 from find_my_tracker.features.auth.router import router as auth_router
-from find_my_tracker.features.auth.service import AdminAuth, LoginRateLimiter
+from find_my_tracker.features.auth.service import AdminAuth, AuthService, LoginRateLimiter
 from find_my_tracker.features.beacons.router import router as beacons_router
 from find_my_tracker.features.health.router import router as health_router
 from find_my_tracker.features.locations.router import router as locations_router
@@ -63,7 +65,7 @@ def build_container(
         secrets=secrets,
         apple=apple,
         device_identity=DeviceIdentityService(db, secrets, apple),
-        auth=AdminAuth(password=settings.admin_password.get_secret_value(), secret_key=secret),
+        auth=AdminAuth(secret_key=secret, secrets=secrets),
         login_limiter=LoginRateLimiter(),
         wizards=WizardManager(),
         poller=Poller(
@@ -85,6 +87,11 @@ def create_app(settings: Settings | None = None, container: Container | None = N
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         settings.data_dir.mkdir(parents=True, exist_ok=True)
         await asyncio.to_thread(upgrade_database, container.db.url)
+        async with container.db.session() as session:
+            await AuthService(session, container.auth, container.clock).load(
+                settings.admin_password.get_secret_value() if settings.admin_password else None,
+                reset=settings.admin_password_reset,
+            )
         await container.device_identity.load()
         container.poller.start()
         try:
@@ -94,9 +101,17 @@ def create_app(settings: Settings | None = None, container: Container | None = N
             await container.wizards.discard()
             await container.db.dispose()
 
-    app = FastAPI(title="Find My Tracker", lifespan=lifespan)
+    docs = settings.expose_api_docs
+    app = FastAPI(
+        title="Find My Tracker",
+        lifespan=lifespan,
+        docs_url="/docs" if docs else None,
+        redoc_url="/redoc" if docs else None,
+        openapi_url="/openapi.json" if docs else None,
+    )
     app.state.container = container
     install_error_handlers(app)
+    _install_middleware(app, settings)
 
     api = APIRouter(prefix="/api")
     for router in (
@@ -115,3 +130,15 @@ def create_app(settings: Settings | None = None, container: Container | None = N
         mount_spa(app, settings.static_dir)
 
     return app
+
+
+def _install_middleware(app: FastAPI, settings: Settings) -> None:
+    """Outermost first: headers wrap everything, the host check rejects before any work."""
+    index = settings.static_dir / "index.html" if settings.static_dir else None
+    app.add_middleware(
+        SecurityHeadersMiddleware,
+        csp=ContentSecurityPolicy(index, extra_sources=settings.csp_extra_sources),
+        force_https=settings.force_https,
+    )
+    if settings.allowed_hosts:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.host_allowlist)

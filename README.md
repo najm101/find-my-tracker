@@ -73,7 +73,13 @@ Android and don't want to run a server, use OpenTagViewer. It's great.
   items, give them an emoji and a colour, pause one without losing its history, or remove it
 - **Status page**: every check the server has made, what it found, and the error when one
   fails — so a quiet map can be told apart from a broken one
-- Single admin password, all secrets encrypted at rest, multi-arch image (`amd64`, `arm64`)
+- **Built to be exposed, carefully**: optional two-factor authentication with an
+  authenticator app and single-use recovery codes, an argon2-hashed password you change from
+  Settings, "sign out everywhere", a log of recent sign-in attempts, rate-limited logins, a
+  strict Content-Security-Policy and a worked HTTPS setup. See
+  [Putting it on the internet](#putting-it-on-the-internet-)
+- Beacon keys, Apple session and two-factor secret encrypted at rest; multi-arch image
+  (`amd64`, `arm64`)
 
 ## What it works with 🏷️
 
@@ -118,8 +124,9 @@ guaranteed iPhone right beside it the whole way.
 - **Your server holds keys that can locate your items.** The database stores your item keys,
   your Apple session (including your Apple ID password), and iCloud Keychain keys, all encrypted
   with your `SECRET_KEY`. Anyone who gets the `data/` folder **and** `SECRET_KEY` can locate your
-  items until you unpair them. Protect both, keep the dashboard on your local network or behind a
-  VPN, and use HTTPS if you expose it at all.
+  items until you unpair them. Your location history is stored unencrypted, so anyone who gets
+  the database reads it. Protect both, and if the dashboard is reachable from outside your
+  network, read [Putting it on the internet](#putting-it-on-the-internet-) before you open it up.
 - **It appears as a Mac in your Apple account.** Signing in adds one device to your account's
   device list: a MacBook Pro with a serial starting `0FMTRK` (the app shows the full serial). Each
   installation creates this identity once and reuses it, so you get exactly one entry. Removing it
@@ -145,6 +152,10 @@ docker compose up -d
 Open `http://<your-server>:8080`, log in with `ADMIN_PASSWORD`, and follow the sign-in wizard.
 The first check runs right away and brings in about the last 7 days of history.
 
+The app binds to `127.0.0.1` only. From another machine on your network, reach it over SSH
+(`ssh -L 8080:127.0.0.1:8080 you@server`), a VPN, or a reverse proxy. To reach it from
+outside your home, read [Putting it on the internet](#putting-it-on-the-internet-) first.
+
 Images are published to `ghcr.io/najm101/find-my-tracker` for `linux/amd64` and `linux/arm64`.
 Use `latest`, or pin a release (`0.3.1`, `0.3`); `edge` is built from every push to `main`. To
 update: `docker compose pull && docker compose up -d`. Migrations run automatically on startup.
@@ -153,17 +164,128 @@ update: `docker compose pull && docker compose up -d`. Migrations run automatica
 
 | Variable | Required | Default | Notes |
 | --- | --- | --- | --- |
-| `SECRET_KEY` | yes | | At least 32 characters. Encrypts the stored keys and signs the login cookie. **Back it up with `data/`.** Changing it makes stored keys unreadable |
-| `ADMIN_PASSWORD` | yes | | Dashboard password (at least 8 characters) |
+| `SECRET_KEY` | yes | | At least 32 characters. Encrypts the stored keys, the Apple session and your two-factor secret, and signs the login cookie. **Back it up with `data/`.** Changing it makes stored keys unreadable |
+| `ADMIN_PASSWORD` | first start | | Dashboard password; use at least 12 characters. Seeds the password on the **first start only**; after that it lives hashed in the database and is changed in Settings, and this can be removed. A shorter one still starts (so an upgrade never locks you out) but logs a warning |
+| `ADMIN_PASSWORD_RESET` | no | `false` | Start once with this and `ADMIN_PASSWORD` set to overwrite a password you have lost. Turn it off again afterwards |
 | `DATABASE_URL` | no | SQLite in `data/` | A PostgreSQL database instead, e.g. `postgresql://user:password@host:5432/tracker`. The schema is created on first start. There is no migration from an existing SQLite database |
 | `ANISETTE_URL` | no | built-in | An external [anisette](https://github.com/Dadoum/anisette-v3-server) server, only if the built-in provider stops working |
 | `PORT` | no | `8080` | |
 | `LOG_LEVEL` | no | `INFO` | |
 | `DEMO_MODE` | no | `false` | Fake Apple account with demo data. See below |
 
+These only matter once something outside your network can reach the dashboard:
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `FORCE_HTTPS` | `false` | TLS is terminated by a proxy in front, so the app only ever sees plain HTTP. Set this and the session cookie is marked `Secure` and HSTS is sent. **Set it whenever you serve over HTTPS** |
+| `TRUSTED_PROXIES` | `127.0.0.1,::1` | Whose `X-Forwarded-For` and `-Proto` to believe. A proxy in another container is not `127.0.0.1`, and without this every visitor shares one login rate-limit bucket. Your proxy's address, or `*` when nothing else can reach the app's port |
+| `ALLOWED_HOSTS` | any | Comma-separated host names to answer to. Anything else gets a 400 |
+| `COOKIE_SAMESITE` | `strict` | `lax` if following a link to the dashboard from another site should keep you signed in. `strict` is the safer default |
+| `EXPOSE_API_DOCS` | `false` | Serve `/docs`, `/redoc` and `/openapi.json`. Off by default: it is a map of the API for anyone who finds the address |
+| `EXTRA_CSP_SOURCES` | | Extra origins the browser may load map tiles from, comma-separated |
+
 Everything lives in the mounted `data/` folder (`tracker.db` plus an anisette cache): back it up
 together with your `SECRET_KEY`. With `DATABASE_URL` set, back up that database instead
 (`pg_dump`), and `data/` then only holds the anisette cache.
+
+## Putting it on the internet 🌐
+
+The safest version of this app is one nothing outside your house can reach. If you only need it
+from your own phone and laptop, a VPN back into your network — [Tailscale](https://tailscale.com),
+[WireGuard](https://www.wireguard.com) — beats everything below: nothing is exposed, there is no
+certificate to renew, and no login page for strangers to find.
+
+If you would rather reach it from any browser, here is how to do it without leaving the front
+door open.
+
+### 1. Turn on two-factor authentication
+
+Settings → Security → **Set up authenticator app**. Scan the QR code with Google Authenticator,
+the iOS Passwords app, 1Password, Bitwarden or anything else that does TOTP, then enter a code to
+confirm. Save the recovery codes somewhere that is not the phone holding the authenticator.
+
+It is optional, and the dashboard works without it. It is also the single biggest difference
+between "someone guessed my password" and "someone guessed my password and got nowhere", so turn
+it on before you open the door. While it is off, one password is all that stands between the
+internet and a map of where your family's things have been.
+
+Also: use a long password, at least 12 characters, and not one you use anywhere else.
+
+### 2. Serve it over HTTPS
+
+Plain HTTP over the internet means your password, your session cookie and every coordinate travel
+in the clear. Don't.
+
+With [DuckDNS](https://www.duckdns.org) keeping a subdomain pointed at your home IP, in `.env`:
+
+```bash
+DOMAIN=yourname.duckdns.org
+ACME_EMAIL=you@example.com
+```
+
+then:
+
+```bash
+curl -O https://raw.githubusercontent.com/najm101/find-my-tracker/main/compose.internet.yaml
+curl -O https://raw.githubusercontent.com/najm101/find-my-tracker/main/Caddyfile
+docker compose -f compose.yaml -f compose.internet.yaml up -d
+```
+
+Forward **ports 80 and 443** on your router to this machine, and nothing else. Caddy gets a
+Let's Encrypt certificate on its own and renews it. The app itself stays bound to `127.0.0.1`.
+
+Running your own proxy instead (nginx, Traefik, Dokploy's built-in one)? Set `FORCE_HTTPS=true`,
+`TRUSTED_PROXIES` to your proxy's address, and `ALLOWED_HOSTS` to your domain. The first two
+matter more than they look: without them the session cookie is never marked `Secure`, and every
+visitor in the world shares a single login rate-limit bucket — so one attacker hammering the
+login page locks *you* out.
+
+### 3. Encrypt the disk underneath it
+
+The database holds your beacon keys, your Apple session and your two-factor secret encrypted with
+`SECRET_KEY`. Your **location history is not** encrypted column by column: doing that would make
+the spatial index useless and turn map panning into a per-row decrypt. Encrypt the storage
+instead — it covers the history, the write-ahead log, temporary files and logs in one go, and
+costs nothing at query time.
+
+**SQLite (the default).** Put `data/` on an encrypted volume, or use an encrypted filesystem on
+the host. On Linux, LUKS:
+
+```bash
+cryptsetup luksFormat /dev/sdX1
+cryptsetup open /dev/sdX1 tracker
+mkfs.ext4 /dev/mapper/tracker
+mount /dev/mapper/tracker /srv/tracker      # then keep data/ under here
+```
+
+**PostgreSQL.** Community PostgreSQL has no built-in transparent encryption, so there is no
+SQLCipher equivalent to switch on. Encrypt the volume its data directory lives on — with Docker
+that is the volume mounted at `/var/lib/postgresql/data` — using LUKS or ZFS native encryption.
+[Percona's `pg_tde`](https://docs.percona.com/pg-tde/) is a real in-database option if you would
+rather not touch the host, at the cost of running Percona's PostgreSQL image.
+
+**Encrypt your backups too.** This is where data usually leaks, not the live server:
+
+```bash
+pg_dump "$DATABASE_URL" | age -r age1yourkey... > tracker-$(date +%F).sql.age
+```
+
+None of this protects a server someone has already broken into — the database must be able to
+read its own data while it is running. It protects cold copies: a stolen disk, a leaked backup, a
+drive you threw away.
+
+### 4. Know what is still true
+
+- **A DuckDNS name is guessable and will be scanned** within hours of going up. Expect login
+  attempts from strangers. Settings → Security shows the recent ones, so you can see them.
+- Failed logins are rate-limited to 5 per IP per 5 minutes, and every attempt is recorded.
+- If you think a session cookie was copied, **Sign out everywhere** in Settings invalidates every
+  cookie ever issued, without touching `SECRET_KEY`.
+- The dashboard sends no analytics and loads nothing from a CDN. Map tiles come from
+  OpenFreeMap and Esri, which see your server's requests but not your URLs
+  (`Referrer-Policy: no-referrer`).
+- Everything the server answers with is `Cache-Control: no-store`, and a strict
+  Content-Security-Policy means an injected script cannot run.
 
 ## Try it without an Apple account
 

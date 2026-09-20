@@ -35,6 +35,7 @@ import {
   AlertTitle,
 } from "~/components/ui/alert"
 import { Button } from "~/components/ui/button"
+import { MobileTabBar, type TabItem } from "~/components/mobile-tab-bar"
 import {
   Sidebar,
   SidebarContent,
@@ -47,16 +48,17 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
 } from "~/components/ui/sidebar"
 import { getAccount } from "~/features/apple-account/api/account"
 import { isAuthenticated, logout } from "~/features/auth/api/auth"
 import { listBeacons } from "~/features/beacons/api/beacons"
 import { BeaconNav } from "~/features/beacons/components/beacon-nav"
+import { MobileItemsSheet } from "~/features/beacons/components/mobile-items-sheet"
 import { MapStage } from "~/features/map/components/map-stage"
 import { getTrackingStatus } from "~/features/tracking/api/tracking"
 import { RefreshButton } from "~/features/tracking/components/refresh-button"
 import { TrackingStatus } from "~/features/tracking/components/tracking-status"
+import { useIsMobile } from "~/hooks/use-mobile"
 import { getHidden, withHiddenToggled } from "~/lib/search-params"
 
 import type { Route } from "./+types/authed-layout"
@@ -78,7 +80,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   return { account, beacons, status, loadedAt: Date.now() }
 }
 
-const NAV = [
+const NAV: TabItem[] = [
   { to: "/", label: "Map", icon: MapIcon, end: true, keepView: true },
   {
     to: "/places",
@@ -87,9 +89,32 @@ const NAV = [
     end: false,
     keepView: true,
   },
-  { to: "/status", label: "Status", icon: ActivityIcon, end: false },
-  { to: "/settings", label: "Settings", icon: SettingsIcon, end: false },
+  {
+    to: "/status",
+    label: "Status",
+    icon: ActivityIcon,
+    end: false,
+    keepView: false,
+  },
+  {
+    to: "/settings",
+    label: "Settings",
+    icon: SettingsIcon,
+    end: false,
+    keepView: false,
+  },
 ]
+
+/** The bottom bar has no room for "Near a place". */
+const TAB_LABELS: Record<string, string> = { "/places": "Places" }
+
+const TABS: TabItem[] = NAV.map((item) => ({
+  ...item,
+  label: TAB_LABELS[item.to] ?? item.label,
+}))
+
+/** Height of the bottom bar, plus whatever the phone reserves for its home indicator. */
+const TAB_BAR_INSET = "calc(3.5rem + env(safe-area-inset-bottom))"
 
 export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
   const { account, beacons, status, loadedAt } = loaderData
@@ -103,6 +128,7 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
   const onMap = !OFF_MAP.has(location.pathname)
   const connected = account.status !== "none"
   const [panelSlot, setPanelSlot] = useState<HTMLElement | null>(null)
+  const isMobile = useIsMobile()
 
   // `revalidator` is a new object on every state change, so hold the function still:
   // the timer below must not restart each time a poll begins or ends.
@@ -127,7 +153,7 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar className="hidden md:flex">
         <SidebarHeader>
           <Link
             to="/"
@@ -194,7 +220,6 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="relative min-h-svh overflow-hidden">
-        <SidebarTrigger className="absolute top-3 left-3 z-20 bg-background shadow-sm md:hidden" />
         {account.status === "needs_reauth" &&
           location.pathname !== "/setup" && (
             <div className="absolute inset-x-3 top-3 z-20 mx-auto max-w-xl md:top-16">
@@ -215,10 +240,31 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
           )}
         {onMap ? (
           <PanelSlot.Provider value={panelSlot}>
-            <div className="flex h-svh w-full flex-col md:flex-row">
+            <div
+              className="flex w-full flex-col md:h-svh md:flex-row"
+              style={{
+                height: `calc(100svh - ${isMobile ? TAB_BAR_INSET : "0px"})`,
+              }}
+            >
               <div className="relative min-h-0 flex-1">
                 <MapStage
                   className="absolute inset-0"
+                  items={
+                    isMobile &&
+                    connected && (
+                      <MobileItemsSheet
+                        beacons={beacons}
+                        hidden={hidden}
+                        activeId={activeId}
+                        now={loadedAt}
+                        onToggle={(id) =>
+                          setParams(withHiddenToggled(params, id), {
+                            replace: true,
+                          })
+                        }
+                      />
+                    )
+                  }
                   controls={
                     connected && (
                       <RefreshButton status={status} now={loadedAt} />
@@ -240,8 +286,11 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
             </div>
           </PanelSlot.Provider>
         ) : (
-          <Outlet />
+          <div style={{ paddingBottom: isMobile ? TAB_BAR_INSET : undefined }}>
+            <Outlet />
+          </div>
         )}
+        <MobileTabBar items={TABS} />
       </SidebarInset>
     </SidebarProvider>
   )

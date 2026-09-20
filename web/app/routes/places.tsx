@@ -84,7 +84,7 @@ export default function Places({ loaderData }: Route.ComponentProps) {
       {place && (
         <RadiusCircle lat={place.lat} lon={place.lon} radiusM={radiusM} />
       )}
-      <div className="pointer-events-none absolute top-3 right-3 bottom-14 left-14 z-10 flex items-start md:left-3 [&>*]:pointer-events-auto">
+      <div className="pointer-events-none absolute top-3 right-3 bottom-14 left-3 z-10 flex items-start [&>*]:pointer-events-auto">
         <PlacesPanel
           place={place}
           radiusM={radiusM}

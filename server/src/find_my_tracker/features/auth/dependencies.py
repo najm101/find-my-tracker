@@ -10,7 +10,7 @@ from find_my_tracker.features.auth.service import SESSION_COOKIE
 
 
 def require_admin(request: Request, container: ContainerDep) -> None:
-    if not container.auth.verify_token(request.cookies.get(SESSION_COOKIE)):
+    if not container.auth.verify_session(request.cookies.get(SESSION_COOKIE)):
         msg = "Log in to continue."
         raise NotAuthenticated(msg)
 

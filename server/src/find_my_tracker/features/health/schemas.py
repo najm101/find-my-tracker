@@ -7,4 +7,4 @@ from pydantic import BaseModel
 
 class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
-    version: str
+    version: str | None = None  # only for a signed-in admin

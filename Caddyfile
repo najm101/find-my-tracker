@@ -1,0 +1,25 @@
+# TLS in front of Find My Tracker. Used by compose.internet.yaml.
+#
+# Caddy requests and renews the certificate by itself; ports 80 and 443 must reach this
+# machine from the internet for that to work.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	reverse_proxy find-my-tracker:8080 {
+		header_up X-Forwarded-Proto https
+	}
+
+	# DuckDNS names are guessable, so this address will be scanned within hours of going up.
+	# The log is how you notice someone trying.
+	log {
+		output file /data/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

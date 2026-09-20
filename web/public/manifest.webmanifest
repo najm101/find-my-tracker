@@ -1,0 +1,26 @@
+{
+  "name": "Find My Tracker",
+  "short_name": "Find My",
+  "description": "Location history for your AirTags and Find My beacons.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#34c759",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Map", "url": "/" },
+    { "name": "Near a place", "url": "/places" },
+    { "name": "Status", "url": "/status" }
+  ]
+}

@@ -4,11 +4,19 @@ services:
     # To build from source instead: comment out `image` and uncomment `build`.
     # build: .
     ports:
-      - "8080:8080"
+      # Loopback only. Put a reverse proxy in front for TLS before anything outside your
+      # network can reach it; see compose.internet.yaml for a worked example.
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./data:/data
     environment:
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env (openssl rand -base64 48)}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      # Seeds the admin password on the first start only. After that it is changed in
+      # Settings, and this line can be removed.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       # ANISETTE_URL: http://anisette:6969   # only if the built-in provider stops working
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     restart: unless-stopped

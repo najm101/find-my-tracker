@@ -1,0 +1,46 @@
+# Reaching the dashboard from outside your home, over HTTPS.
+#
+#   docker compose -f compose.yaml -f compose.internet.yaml up -d
+#
+# Caddy terminates TLS and gets a certificate from Let's Encrypt on its own. The app is never
+# published to the host, so the only way in is through the proxy.
+#
+# Before starting, in .env:
+#   DOMAIN=yourname.duckdns.org      the name your DuckDNS updater keeps pointed at this house
+#   ACME_EMAIL=you@example.com       where Let's Encrypt sends expiry warnings
+#
+# On your router, forward ports 80 and 443 to this machine. Do not forward 8080.
+
+services:
+  find-my-tracker:
+    # The base file already publishes only to 127.0.0.1, so nothing outside this machine can
+    # reach the app directly; the proxy talks to it over the compose network.
+    environment:
+      # Caddy is another container, so its address is not 127.0.0.1 and uvicorn would
+      # otherwise ignore its forwarded headers: every visitor would share one login
+      # rate-limit bucket and the session cookie would never be marked Secure.
+      TRUSTED_PROXIES: "*"
+      FORCE_HTTPS: "true"
+      ALLOWED_HOSTS: ${DOMAIN:?set DOMAIN in .env}
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data      # the certificates; losing this means re-issuing them
+      - caddy-config:/config
+    depends_on:
+      - find-my-tracker
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:

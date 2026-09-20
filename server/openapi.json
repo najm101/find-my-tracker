@@ -437,13 +437,17 @@
             "type": "string"
           },
           "version": {
-            "title": "Version",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
           }
         },
-        "required": [
-          "version"
-        ],
         "title": "HealthResponse",
         "type": "object"
       },
@@ -594,6 +598,52 @@
         "title": "LocationsResponse",
         "type": "object"
       },
+      "LoginAttemptOut": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "client_ip": {
+            "title": "Client Ip",
+            "type": "string"
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/LoginOutcome"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Agent"
+          }
+        },
+        "required": [
+          "at",
+          "client_ip",
+          "user_agent",
+          "outcome"
+        ],
+        "title": "LoginAttemptOut",
+        "type": "object"
+      },
+      "LoginOutcome": {
+        "enum": [
+          "success",
+          "wrong_password",
+          "wrong_code",
+          "recovery_used",
+          "rate_limited"
+        ],
+        "title": "LoginOutcome",
+        "type": "string"
+      },
       "LoginRequest": {
         "properties": {
           "password": {
@@ -605,6 +655,20 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "LoginResponse": {
+        "properties": {
+          "mfa_required": {
+            "description": "Post the authenticator code to /auth/mfa to finish.",
+            "title": "Mfa Required",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mfa_required"
+        ],
+        "title": "LoginResponse",
         "type": "object"
       },
       "MeResponse": {
@@ -656,6 +720,20 @@
         "title": "MethodRequest",
         "type": "object"
       },
+      "MfaRequest": {
+        "properties": {
+          "code": {
+            "description": "A six-digit authenticator code, or one recovery code.",
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "MfaRequest",
+        "type": "object"
+      },
       "Noise": {
         "enum": [
           "spike",
@@ -664,6 +742,39 @@
         ],
         "title": "Noise",
         "type": "string"
+      },
+      "PasswordChange": {
+        "properties": {
+          "current_password": {
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "minLength": 12,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "PasswordChange",
+        "type": "object"
+      },
+      "PasswordConfirm": {
+        "description": "Re-entering the password guards changes to the second factor.",
+        "properties": {
+          "password": {
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "PasswordConfirm",
+        "type": "object"
       },
       "PollOutcome": {
         "enum": [
@@ -757,6 +868,55 @@
         "title": "PollTrigger",
         "type": "string"
       },
+      "RecoveryCodes": {
+        "properties": {
+          "codes": {
+            "description": "Shown once. They cannot be retrieved again.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Codes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "codes"
+        ],
+        "title": "RecoveryCodes",
+        "type": "object"
+      },
+      "SecurityStatus": {
+        "properties": {
+          "password_changed_at": {
+            "format": "date-time",
+            "title": "Password Changed At",
+            "type": "string"
+          },
+          "recent_attempts": {
+            "items": {
+              "$ref": "#/components/schemas/LoginAttemptOut"
+            },
+            "title": "Recent Attempts",
+            "type": "array"
+          },
+          "recovery_codes_remaining": {
+            "title": "Recovery Codes Remaining",
+            "type": "integer"
+          },
+          "totp_enabled": {
+            "title": "Totp Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "totp_enabled",
+          "recovery_codes_remaining",
+          "password_changed_at",
+          "recent_attempts"
+        ],
+        "title": "SecurityStatus",
+        "type": "object"
+      },
       "SettingsUpdate": {
         "properties": {
           "poll_interval_minutes": {
@@ -836,6 +996,31 @@
           "point_count"
         ],
         "title": "Stay",
+        "type": "object"
+      },
+      "TotpSetup": {
+        "properties": {
+          "qr_data_uri": {
+            "description": "The same URI as an SVG QR code, for an <img src>.",
+            "title": "Qr Data Uri",
+            "type": "string"
+          },
+          "secret": {
+            "description": "Type this into the app if the QR code cannot be scanned.",
+            "title": "Secret",
+            "type": "string"
+          },
+          "uri": {
+            "title": "Uri",
+            "type": "string"
+          }
+        },
+        "required": [
+          "secret",
+          "uri",
+          "qr_data_uri"
+        ],
+        "title": "TotpSetup",
         "type": "object"
       },
       "TrackingStatus": {
@@ -1436,6 +1621,7 @@
     },
     "/api/auth/login": {
       "post": {
+        "description": "Step one. With two-factor on, this only issues a short-lived ticket for `/auth/mfa`.",
         "operationId": "login_api_auth_login_post",
         "requestBody": {
           "content": {
@@ -1448,7 +1634,14 @@
           "required": true
         },
         "responses": {
-          "204": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            },
             "description": "Successful Response"
           },
           "422": {
@@ -1498,6 +1691,251 @@
           }
         },
         "summary": "Me",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/mfa": {
+      "post": {
+        "description": "Step two: a six-digit authenticator code, or one recovery code.",
+        "operationId": "submit_mfa_api_auth_mfa_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Mfa",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/password": {
+      "post": {
+        "description": "Changing the password signs every other browser out. This one stays signed in.",
+        "operationId": "change_password_api_auth_password_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Password",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/recovery-codes": {
+      "post": {
+        "description": "Replace every unused recovery code with a fresh set.",
+        "operationId": "regenerate_recovery_codes_api_auth_recovery_codes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodes"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regenerate Recovery Codes",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/security": {
+      "get": {
+        "operationId": "security_api_auth_security_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Security",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/sessions/revoke": {
+      "post": {
+        "description": "Log out everywhere, including here.",
+        "operationId": "revoke_sessions_api_auth_sessions_revoke_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Revoke Sessions",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/totp/confirm": {
+      "post": {
+        "operationId": "confirm_totp_api_auth_totp_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodes"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm Totp",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/totp/disable": {
+      "post": {
+        "operationId": "disable_totp_api_auth_totp_disable_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Disable Totp",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/totp/setup": {
+      "post": {
+        "description": "Mint a secret to scan. It does nothing until `/auth/totp/confirm` proves it arrived.",
+        "operationId": "start_totp_api_auth_totp_setup_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TotpSetup"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Start Totp",
         "tags": [
           "auth"
         ]
