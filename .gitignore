@@ -31,6 +31,8 @@ AGENTS.md
 .continue/
 .mcp.json
 docs/PLAN.md
+.agents/
+skills-lock.json
 
 # Old proof of concept and its root project (safe to delete locally)
 spike/
