@@ -7,3 +7,7 @@ export function getTrackingStatus() {
 export function refreshNow() {
   return unwrap(api.POST("/api/tracking/refresh"))
 }
+
+export function listPollRuns(limit = 50) {
+  return unwrap(api.GET("/api/tracking/runs", { params: { query: { limit } } }))
+}

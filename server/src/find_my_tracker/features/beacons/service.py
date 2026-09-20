@@ -57,6 +57,10 @@ class BeaconService:
         await self._repo.delete(await self._get(beacon_id))
         await self._session.commit()
 
+    async def delete_all(self) -> None:
+        """Every beacon and all of its history. Does not commit."""
+        await self._repo.delete_all()
+
     async def import_from_apple(self, account_id: int, accessories: Sequence[AccessoryInfo]) -> int:
         """Insert new beacons and refresh existing ones (keys, Apple name). Does not commit."""
         now = self._clock.timestamp()

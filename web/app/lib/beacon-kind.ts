@@ -22,3 +22,17 @@ export const BEACON_KINDS: Record<Kind, { label: string; icon: LucideIcon }> = {
   airpods: { label: "AirPods", icon: HeadphonesIcon },
   other: { label: "Find My accessory", icon: TagIcon },
 }
+
+/** Marker and path colours, matching the palette the server assigns on import. */
+export const BEACON_COLORS = [
+  "#2563eb",
+  "#dc2626",
+  "#16a34a",
+  "#d97706",
+  "#9333ea",
+  "#0891b2",
+  "#db2777",
+  "#65a30d",
+] as const
+
+export const DEFAULT_BEACON_COLOR = BEACON_COLORS[0]

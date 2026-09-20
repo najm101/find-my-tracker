@@ -245,7 +245,6 @@ export function PathLayer({ points, colors, selectedId, onPick }: Props) {
 function SegmentDetails({ segment }: { segment: Segment }) {
   const { from, to, seconds, meters } = segment
   const gap = seconds > GAP_S
-  const kmh = seconds > 0 ? (meters / seconds) * 3.6 : 0
   return (
     <div className="flex flex-col gap-0.5 text-xs">
       <span className="text-sm font-medium tabular-nums">
@@ -258,9 +257,11 @@ function SegmentDetails({ segment }: { segment: Segment }) {
           Apple stops reporting it near your own devices.
         </span>
       ) : (
+        // No speed here: `seconds` is the gap between two *reports*, not time spent
+        // travelling. An item can sit still for most of it, so distance over that gap says
+        // nothing about how fast it moved.
         <span className="text-muted-foreground tabular-nums">
           {duration(seconds)} · {distance(meters)}
-          {meters >= ARROW_MIN_M && ` · ~${Math.round(kmh)} km/h`}
         </span>
       )}
     </div>

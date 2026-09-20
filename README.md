@@ -69,6 +69,10 @@ Android and don't want to run a server, use OpenTagViewer. It's great.
 - **Guided Apple sign-in** in the browser: Apple ID, two-factor code, then the screen-lock
   passcode of one of your Apple devices to unlock the item keys from iCloud Keychain
 - **Add items later** without signing in again
+- **Settings page**: check interval (with a warning below the recommended 30 minutes), rename
+  items, give them an emoji and a colour, pause one without losing its history, or remove it
+- **Status page**: every check the server has made, what it found, and the error when one
+  fails — so a quiet map can be told apart from a broken one
 - Single admin password, all secrets encrypted at rest, multi-arch image (`amd64`, `arm64`)
 
 ## What it works with 🏷️

@@ -12,16 +12,17 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card"
-import { ScrollArea } from "~/components/ui/scroll-area"
 import { getLocations } from "~/features/history/api/locations"
 import { DayTimeline } from "~/features/history/components/day-timeline"
 import { ExportMenu } from "~/features/history/components/export-menu"
 import { NoiseToggle } from "~/features/history/components/noise-toggle"
 import { RangePicker } from "~/features/history/components/range-picker"
+import { indexStays, rowKeyFor } from "~/features/history/timeline"
 import {
   type MapFocus,
   TrackerLayers,
 } from "~/features/map/components/tracker-layers"
+import type { Schemas } from "~/lib/api/client"
 import { BEACON_KINDS } from "~/lib/beacon-kind"
 import { getShowNoise, withShowNoise } from "~/lib/search-params"
 import { rangeFromParams, withRange } from "~/lib/time-range"
@@ -81,13 +82,8 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
   const noisyCount = history.points.length - good.length
   const points = showNoise ? history.points : good
   const stays = showNoise ? [] : history.stays
-  // The timeline row a report is shown in: its stay, if it's part of one.
-  const rowKey = (p: { observed_at: string }) => {
-    const stay = stays.find(
-      (s) => p.observed_at >= s.arrived_at && p.observed_at <= s.left_at
-    )
-    return stay ? `stay-${stay.arrived_at}` : p.observed_at
-  }
+  const stayIndex = indexStays(stays)
+  const rowKey = (p: Schemas["LocationPoint"]) => rowKeyFor(stayIndex, p)
 
   return (
     <>
@@ -169,14 +165,12 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
                 `, ${noisyCount.toLocaleString()} unlikely hidden`}
               {history.truncated && " (limit reached, narrow the range)"}
             </p>
-            <ScrollArea className="min-h-0 flex-1 pr-3">
-              <DayTimeline
-                points={points}
-                stays={stays}
-                selection={focus}
-                onSelect={(t) => setFocus({ ...t, move: true })}
-              />
-            </ScrollArea>
+            <DayTimeline
+              points={points}
+              stays={stays}
+              selection={focus}
+              onSelect={(t) => setFocus({ ...t, move: true })}
+            />
           </CardContent>
         </Card>
       </SidePanel>

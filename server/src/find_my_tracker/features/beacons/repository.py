@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from find_my_tracker.features.beacons.models import Beacon
@@ -29,3 +29,7 @@ class BeaconRepository:
 
     async def delete(self, beacon: Beacon) -> None:
         await self._session.delete(beacon)
+
+    async def delete_all(self) -> None:
+        """Locations follow through the cascade, which fires the R*Tree delete trigger."""
+        await self._session.execute(delete(Beacon))

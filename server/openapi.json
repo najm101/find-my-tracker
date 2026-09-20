@@ -1120,9 +1120,33 @@
     "/api/apple/account": {
       "delete": {
         "operationId": "sign_out_api_apple_account_delete",
+        "parameters": [
+          {
+            "description": "Also delete every beacon and its whole history.",
+            "in": "query",
+            "name": "purge",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Also delete every beacon and its whole history.",
+              "title": "Purge",
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Sign Out",

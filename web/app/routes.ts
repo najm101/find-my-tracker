@@ -12,5 +12,7 @@ export default [
     route("beacons/:beaconId", "routes/beacon.tsx"),
     route("places", "routes/places.tsx"),
     route("setup", "routes/setup.tsx"),
+    route("settings", "routes/settings.tsx"),
+    route("status", "routes/status.tsx"),
   ]),
 ] satisfies RouteConfig

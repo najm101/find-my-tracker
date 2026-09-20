@@ -58,6 +58,11 @@ export function duration(seconds: number): string {
   return h % 24 ? `${d} d ${h % 24} h` : `${d} d`
 }
 
+/** How long between two ISO timestamps, e.g. "3 h 10 min". */
+export function durationBetween(from: string, to: string): string {
+  return duration((new Date(to).getTime() - new Date(from).getTime()) / 1000)
+}
+
 /** "640 m", "3.2 km", "48 km". */
 export function distance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m`

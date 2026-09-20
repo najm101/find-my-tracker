@@ -2,6 +2,11 @@ import { BatteryLowIcon, EyeIcon, EyeOffIcon } from "lucide-react"
 import { Link } from "react-router"
 
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip"
+import {
   SidebarGroup,
   SidebarGroupAction,
   SidebarGroupContent,
@@ -96,14 +101,25 @@ export function BeaconNav({
                     </span>
                   </Link>
                 </SidebarMenuButton>
-                <SidebarMenuAction
-                  showOnHover={!isHidden}
-                  onClick={() => onToggle(b.id)}
-                  title={isHidden ? "Show on map" : "Hide on map"}
-                  className="top-1/2! -translate-y-1/2"
-                >
-                  {isHidden ? <EyeOffIcon /> : <EyeIcon />}
-                </SidebarMenuAction>
+                {/* Always visible: revealing it on hover would put it out of reach on touch. */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <SidebarMenuAction
+                      onClick={() => onToggle(b.id)}
+                      aria-label={
+                        isHidden
+                          ? `Show ${b.name} on the map`
+                          : `Hide ${b.name} on the map`
+                      }
+                      className="top-1/2! -translate-y-1/2"
+                    >
+                      {isHidden ? <EyeOffIcon /> : <EyeIcon />}
+                    </SidebarMenuAction>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    {isHidden ? "Show on map" : "Hide on map"}
+                  </TooltipContent>
+                </Tooltip>
               </SidebarMenuItem>
             )
           })}

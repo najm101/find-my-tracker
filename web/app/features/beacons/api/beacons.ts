@@ -12,3 +12,11 @@ export function updateBeacon(id: number, patch: Schemas["BeaconUpdate"]) {
     })
   )
 }
+
+export function deleteBeacon(id: number) {
+  return unwrap(
+    api.DELETE("/api/beacons/{beacon_id}", {
+      params: { path: { beacon_id: id } },
+    })
+  )
+}

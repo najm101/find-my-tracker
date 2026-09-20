@@ -9,10 +9,13 @@
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "lint": "eslint .",
     "format:check": "prettier --check \"**/*.{ts,tsx}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "api:types": "openapi-typescript ../server/openapi.json -o app/lib/api/schema.d.ts && prettier --write app/lib/api/schema.d.ts"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.3.0",
+    "@tanstack/react-virtual": "^3.14.13",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.3.0",
     "date-fns": "^4.4.0",
@@ -32,25 +35,35 @@
     "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
+    "@babel/plugin-syntax-jsx": "^8.0.1",
+    "@babel/preset-typescript": "^8.0.1",
     "@eslint/js": "^10.0.1",
     "@react-router/dev": "8.4.0",
     "@tailwindcss/vite": "^4",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/geojson": "^7946.0.16",
     "@types/node": "^24.13.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.1.1",
+    "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^10.10.0",
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.12.0",
+    "jsdom": "^30.1.0",
     "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
     "typescript": "^6",
     "typescript-eslint": "^8.70.0",
-    "vite": "^8"
+    "vite": "^8",
+    "vite-plugin-babel": "^1.7.3",
+    "vitest": "^5.0.1"
   },
   "engines": {
     "node": ">=22.22.0"

@@ -24,7 +24,7 @@ import {
 import { ScrollArea } from "~/components/ui/scroll-area"
 import { Slider } from "~/components/ui/slider"
 import type { Schemas } from "~/lib/api/client"
-import { dateTime } from "~/lib/format"
+import { dateTime, durationBetween } from "~/lib/format"
 
 type Props = {
   place: { lat: number; lon: number } | null
@@ -33,16 +33,6 @@ type Props = {
   beacons: Schemas["BeaconOut"][]
   onRadius: (radiusM: number) => void
   children?: React.ReactNode
-}
-
-function duration(from: string, to: string): string {
-  const minutes = Math.round(
-    (new Date(to).getTime() - new Date(from).getTime()) / 60_000
-  )
-  if (minutes < 1) return "a moment"
-  if (minutes < 60) return `${minutes} min`
-  const h = Math.floor(minutes / 60)
-  return `${h} h ${minutes % 60} min`
 }
 
 export function PlacesPanel({
@@ -114,9 +104,9 @@ export function PlacesPanel({
                       </ItemTitle>
                       <ItemDescription>
                         {dateTime(v.arrived_at)} ·{" "}
-                        {duration(v.arrived_at, v.left_at)} · {v.point_count}{" "}
-                        sighting{v.point_count === 1 ? "" : "s"}, closest{" "}
-                        {Math.round(v.closest_m)} m
+                        {durationBetween(v.arrived_at, v.left_at)} ·{" "}
+                        {v.point_count} sighting{v.point_count === 1 ? "" : "s"}
+                        , closest {Math.round(v.closest_m)} m
                       </ItemDescription>
                     </ItemContent>
                   </Item>

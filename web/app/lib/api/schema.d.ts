@@ -800,7 +800,10 @@ export interface operations {
   }
   sign_out_api_apple_account_delete: {
     parameters: {
-      query?: never
+      query?: {
+        /** @description Also delete every beacon and its whole history. */
+        purge?: boolean
+      }
       header?: never
       path?: never
       cookie?: never
@@ -813,6 +816,15 @@ export interface operations {
           [name: string]: unknown
         }
         content?: never
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
       }
     }
   }

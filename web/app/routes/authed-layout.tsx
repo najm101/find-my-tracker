@@ -1,15 +1,18 @@
 import {
+  ActivityIcon,
   CircleAlertIcon,
   LogOutIcon,
   MapIcon,
   MapPinnedIcon,
   RadarIcon,
+  SettingsIcon,
 } from "lucide-react"
 import {
   createContext,
   type ReactNode,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react"
 import { createPortal } from "react-dom"
@@ -58,11 +61,16 @@ import { getHidden, withHiddenToggled } from "~/lib/search-params"
 
 import type { Route } from "./+types/authed-layout"
 
+/** Pages that replace the map instead of drawing on it. */
+const OFF_MAP = new Set(["/setup", "/settings", "/status"])
+
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   if (!(await isAuthenticated())) throw redirect("/login")
   const account = await getAccount()
   const path = new URL(request.url).pathname
-  if (account.status === "none" && path !== "/setup") throw redirect("/setup")
+  // Without an account there is nothing to show but the wizard — except settings, which
+  // is where the "connect an account" button lives.
+  if (account.status === "none" && !OFF_MAP.has(path)) throw redirect("/setup")
   const [beacons, status] = await Promise.all([
     listBeacons(),
     getTrackingStatus(),
@@ -71,8 +79,16 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 }
 
 const NAV = [
-  { to: "/", label: "Map", icon: MapIcon, end: true },
-  { to: "/places", label: "Near a place", icon: RadarIcon, end: false },
+  { to: "/", label: "Map", icon: MapIcon, end: true, keepView: true },
+  {
+    to: "/places",
+    label: "Near a place",
+    icon: RadarIcon,
+    end: false,
+    keepView: true,
+  },
+  { to: "/status", label: "Status", icon: ActivityIcon, end: false },
+  { to: "/settings", label: "Settings", icon: SettingsIcon, end: false },
 ]
 
 export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
@@ -84,18 +100,30 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
   const hidden = getHidden(params)
   const activeId =
     Number(location.pathname.match(/^\/beacons\/(\d+)/)?.[1]) || null
-  const onMap = location.pathname !== "/setup"
+  const onMap = !OFF_MAP.has(location.pathname)
   const connected = account.status !== "none"
   const [panelSlot, setPanelSlot] = useState<HTMLElement | null>(null)
 
-  // Keep the status and positions fresh: closely while a check runs, else every minute.
+  // `revalidator` is a new object on every state change, so hold the function still:
+  // the timer below must not restart each time a poll begins or ends.
+  const revalidate = useRef(revalidator.revalidate)
   useEffect(() => {
-    const id = setInterval(
-      () => revalidator.revalidate(),
-      status.running ? 3_000 : 60_000
-    )
-    return () => clearInterval(id)
-  }, [status.running, revalidator])
+    revalidate.current = revalidator.revalidate
+  })
+
+  // Keep the status and positions fresh: closely while a check runs, else every minute.
+  // A hidden tab asks for nothing and catches up when it comes back.
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState === "visible") void revalidate.current()
+    }
+    const id = setInterval(tick, status.running ? 3_000 : 60_000)
+    document.addEventListener("visibilitychange", tick)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener("visibilitychange", tick)
+    }
+  }, [status.running])
 
   return (
     <SidebarProvider>
@@ -124,7 +152,10 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
                       }
                     >
                       <NavLink
-                        to={{ pathname: item.to, search: params.toString() }}
+                        to={{
+                          pathname: item.to,
+                          search: item.keepView ? params.toString() : "",
+                        }}
                         end={item.end}
                       >
                         <item.icon />

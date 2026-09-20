@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import asyncio
+
 from fastapi.testclient import TestClient
 
+from find_my_tracker.core.container import Container
+from find_my_tracker.features.tracking.schemas import PollTrigger
 from find_my_tracker.integrations.apple.fake import FakeAppleClientFactory
 from tests.conftest import sign_in
 
@@ -146,3 +150,30 @@ def test_add_items_expired_session(admin: TestClient, apple: FakeAppleClientFact
     res = admin.post("/api/apple/wizard/resume")
     assert res.json()["error"]["code"] == "reauth_required"
     assert admin.get("/api/apple/account").json()["status"] == "needs_reauth"
+
+
+def test_sign_out_keeps_beacons_and_history(admin: TestClient, container: Container) -> None:
+    sign_in(admin)
+    asyncio.run(container.poller.service.run(PollTrigger.SCHEDULE))
+    before = admin.get("/api/beacons").json()
+    assert before and all(b["location_count"] for b in before)
+
+    assert admin.delete("/api/apple/account").status_code == 204
+
+    assert admin.get("/api/apple/account").json()["status"] == "none"
+    after = admin.get("/api/beacons").json()
+    assert [(b["id"], b["location_count"]) for b in after] == [
+        (b["id"], b["location_count"]) for b in before
+    ]
+
+
+def test_sign_out_with_purge_wipes_everything(admin: TestClient, container: Container) -> None:
+    sign_in(admin)
+    asyncio.run(container.poller.service.run(PollTrigger.SCHEDULE))
+    assert admin.get("/api/locations").json()["points"]
+
+    assert admin.delete("/api/apple/account", params={"purge": True}).status_code == 204
+
+    assert admin.get("/api/apple/account").json()["status"] == "none"
+    assert admin.get("/api/beacons").json() == []
+    assert admin.get("/api/locations").json()["points"] == []

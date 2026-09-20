@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from typing import Annotated
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 from find_my_tracker.core.deps import ContainerDep, SessionDep
 from find_my_tracker.core.errors import Conflict
@@ -75,8 +76,16 @@ async def get_account(_: AdminDep, session: SessionDep, container: ContainerDep)
 
 
 @router.delete("/account", status_code=status.HTTP_204_NO_CONTENT)
-async def sign_out(_: AdminDep, session: SessionDep, container: ContainerDep) -> None:
-    await _account(session, container).sign_out()
+async def sign_out(
+    _: AdminDep,
+    session: SessionDep,
+    container: ContainerDep,
+    purge: Annotated[
+        bool, Query(description="Also delete every beacon and its whole history.")
+    ] = False,
+) -> None:
+    beacons = BeaconService(session, container.secrets, container.clock)
+    await _account(session, container).sign_out(beacons, purge=purge)
 
 
 # ---- wizard ----

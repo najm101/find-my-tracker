@@ -114,8 +114,10 @@ class AppleAccountService:
         account.last_error = error
         account.updated_at = self._clock.timestamp()
 
-    async def sign_out(self) -> None:
-        """Forget the Apple session. Beacons and their history stay."""
+    async def sign_out(self, beacons: BeaconService, *, purge: bool = False) -> None:
+        """Forget the Apple session. Beacons and their history stay unless `purge`."""
+        if purge:
+            await beacons.delete_all()
         await self._repo.delete_all()
         await self._session.commit()
 

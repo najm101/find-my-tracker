@@ -1,5 +1,6 @@
+import { useVirtualizer } from "@tanstack/react-virtual"
 import { MapPinIcon, MapPinnedIcon, TriangleAlertIcon } from "lucide-react"
-import { useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 
 import {
   Empty,
@@ -7,9 +8,17 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "~/components/ui/empty"
+import { ScrollArea } from "~/components/ui/scroll-area"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip"
 import type { Schemas } from "~/lib/api/client"
 import { time } from "~/lib/format"
 import { cn } from "~/lib/utils"
+
+import { buildRows, type TimelineRow } from "../timeline"
 
 type Point = Schemas["LocationPoint"]
 type Stay = Schemas["Stay"]
@@ -21,15 +30,14 @@ export type TimelineTarget = {
   key: string
 }
 
-type Entry =
-  | { kind: "point"; at: string; point: Point }
-  | { kind: "stay"; at: string; stay: Stay }
-
 const NOISE: Record<Noise, string> = {
   spike: "Far from the reports just before and after it",
   too_fast: "Getting there would need an impossible speed",
   imprecise: "Poor accuracy, and it disagrees with nearby reports",
 }
+
+/** Rough row heights; the virtualiser measures the real ones as they render. */
+const ESTIMATE = { day: 28, entry: 34 }
 
 type Props = {
   points: Point[]
@@ -45,37 +53,63 @@ type Props = {
 
 /** Sightings grouped by day, newest first. Stays show as one row. */
 export function DayTimeline({ points, stays, selection, onSelect }: Props) {
-  const days = useMemo(() => {
-    const entries: Entry[] = []
-    const inStay = (p: Point) =>
-      stays.some(
-        (s) =>
-          s.beacon_id === p.beacon_id &&
-          p.observed_at >= s.arrived_at &&
-          p.observed_at <= s.left_at
-      )
-    for (const p of points) {
-      if (!inStay(p))
-        entries.push({ kind: "point", at: p.observed_at, point: p })
-    }
-    for (const s of stays)
-      entries.push({ kind: "stay", at: s.left_at, stay: s })
-    entries.sort((a, b) => b.at.localeCompare(a.at))
+  // React Compiler skips this component (TanStack Virtual returns unmemoizable functions),
+  // so everything derived here is memoized by hand.
+  const rows = useMemo(() => buildRows(points, stays), [points, stays])
+  const scroller = useRef<HTMLDivElement>(null)
 
-    const groups = new Map<string, { entries: Entry[]; reports: number }>()
-    for (const e of entries) {
-      const day = new Date(e.at).toLocaleDateString(undefined, {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-      })
-      const group = groups.get(day) ?? { entries: [], reports: 0 }
-      group.entries.push(e)
-      group.reports += e.kind === "stay" ? e.stay.point_count : 1
-      groups.set(day, group)
-    }
-    return [...groups.entries()]
-  }, [points, stays])
+  const dayIndices = useMemo(
+    () => rows.flatMap((row, i) => (row.type === "day" ? [i] : [])),
+    [rows]
+  )
+  // Keep the heading of the day being scrolled through mounted, so it can stick to the top.
+  const stickyFor = useCallback(
+    (startIndex: number) => {
+      let sticky = dayIndices[0] ?? 0
+      for (const i of dayIndices) {
+        if (i > startIndex) break
+        sticky = i
+      }
+      return sticky
+    },
+    [dayIndices]
+  )
+
+  // Known: TanStack Virtual returns functions the compiler cannot memoize, which is why
+  // everything derived in this component is memoized by hand.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scroller.current,
+    estimateSize: (i) =>
+      rows[i].type === "day" ? ESTIMATE.day : ESTIMATE.entry,
+    overscan: 12,
+    rangeExtractor: useCallback(
+      (range: { startIndex: number; endIndex: number; overscan: number }) => {
+        const visible = new Set<number>([stickyFor(range.startIndex)])
+        const start = Math.max(0, range.startIndex - range.overscan)
+        const end = range.endIndex + range.overscan
+        for (let i = start; i <= end; i++) visible.add(i)
+        return [...visible].sort((a, b) => a - b)
+      },
+      [stickyFor]
+    ),
+  })
+
+  const indexByKey = useMemo(() => {
+    const byKey = new Map<string, number>()
+    rows.forEach((row, i) => byKey.set(row.key, i))
+    return byKey
+  }, [rows])
+
+  // Bring a row picked elsewhere (on the map) into view. `selection` is a fresh object every
+  // pick, so picking the same row twice scrolls to it twice.
+  const scrollToIndex = virtualizer.scrollToIndex
+  useEffect(() => {
+    if (!selection) return
+    const index = indexByKey.get(selection.key)
+    if (index != null) scrollToIndex(index, { align: "center" })
+  }, [selection, indexByKey, scrollToIndex])
 
   if (points.length === 0) {
     return (
@@ -92,58 +126,79 @@ export function DayTimeline({ points, stays, selection, onSelect }: Props) {
     )
   }
 
+  const items = virtualizer.getVirtualItems()
+  const sticky = virtualizer.range
+    ? stickyFor(virtualizer.range.startIndex)
+    : dayIndices[0]
+
   return (
-    <div className="flex flex-col gap-4">
-      {days.map(([day, group]) => (
-        <section key={day} className="flex flex-col gap-1">
-          <h3 className="sticky top-0 z-10 flex justify-between bg-card py-1 text-xs font-medium text-muted-foreground">
-            <span>{day}</span>
-            <span>{group.reports}</span>
-          </h3>
-          <ul className="flex flex-col">
-            {group.entries.map((e) => (
-              <li key={`${e.kind}-${e.at}`}>
-                {e.kind === "stay" ? (
-                  <StayRow
-                    stay={e.stay}
-                    {...rowSelection(selection, `stay-${e.stay.arrived_at}`)}
-                    onSelect={onSelect}
-                  />
-                ) : (
-                  <PointRow
-                    point={e.point}
-                    {...rowSelection(selection, e.point.observed_at)}
-                    onSelect={onSelect}
-                  />
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
+    <ScrollArea className="min-h-0 flex-1" viewportRef={scroller}>
+      <div
+        className="relative w-full pr-3"
+        style={{ height: virtualizer.getTotalSize() }}
+      >
+        {items.map((item) => {
+          const row = rows[item.index]
+          const isSticky = item.index === sticky
+          return (
+            <div
+              key={row.key}
+              data-index={item.index}
+              ref={virtualizer.measureElement}
+              className={cn("left-0 w-full", isSticky ? "sticky" : "absolute")}
+              style={
+                isSticky
+                  ? { top: 0, zIndex: 10 }
+                  : { top: 0, transform: `translateY(${item.start}px)` }
+              }
+            >
+              <Row
+                row={row}
+                highlighted={isHighlighted(selection, row.key)}
+                onSelect={onSelect}
+              />
+            </div>
+          )
+        })}
+      </div>
+    </ScrollArea>
   )
 }
 
-function rowSelection(
-  selection: Props["selection"],
-  key: string
-): { selection: object | null; highlighted: boolean } {
-  if (selection?.key === key) return { selection, highlighted: true }
-  return {
-    selection: null,
-    highlighted: selection?.also?.includes(key) ?? false,
-  }
+function isHighlighted(selection: Props["selection"], key: string): boolean {
+  return selection?.key === key || (selection?.also?.includes(key) ?? false)
 }
 
-/** A ref that scrolls its row into view each time it is picked (e.g. on the map). */
-function useRevealWhenPicked(selection: object | null) {
-  const ref = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    if (selection)
-      ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
-  }, [selection])
-  return ref
+function Row({
+  row,
+  highlighted,
+  onSelect,
+}: {
+  row: TimelineRow
+  highlighted: boolean
+  onSelect: (target: TimelineTarget) => void
+}) {
+  if (row.type === "day") {
+    return (
+      <h3 className="flex justify-between bg-card py-1 text-xs font-medium text-muted-foreground">
+        <span>{row.label}</span>
+        <span>{row.reports}</span>
+      </h3>
+    )
+  }
+  if (row.type === "stay") {
+    return (
+      <StayRow
+        stay={row.stay}
+        rowKey={row.key}
+        highlighted={highlighted}
+        onSelect={onSelect}
+      />
+    )
+  }
+  return (
+    <PointRow point={row.point} highlighted={highlighted} onSelect={onSelect} />
+  )
 }
 
 const ROW =
@@ -151,29 +206,26 @@ const ROW =
 
 function StayRow({
   stay,
-  selection,
+  rowKey,
   highlighted,
   onSelect,
 }: {
   stay: Stay
-  selection: object | null
+  rowKey: string
   highlighted: boolean
   onSelect: (target: TimelineTarget) => void
 }) {
-  const selected = highlighted
-  const ref = useRevealWhenPicked(selection)
   return (
     <button
-      ref={ref}
       type="button"
       onClick={() =>
         onSelect({
           latitude: stay.latitude,
           longitude: stay.longitude,
-          key: `stay-${stay.arrived_at}`,
+          key: rowKey,
         })
       }
-      className={cn(ROW, "items-start", selected && "bg-primary/15")}
+      className={cn(ROW, "items-start", highlighted && "bg-primary/15")}
     >
       <MapPinnedIcon className="mt-0.5 size-3.5 shrink-0 text-primary" />
       <span className="flex min-w-0 flex-col">
@@ -193,23 +245,17 @@ function StayRow({
 
 function PointRow({
   point,
-  selection,
   highlighted,
   onSelect,
 }: {
   point: Point
-  selection: object | null
   highlighted: boolean
   onSelect: (target: TimelineTarget) => void
 }) {
-  const selected = highlighted
   const Icon = point.noise ? TriangleAlertIcon : MapPinIcon
-  const ref = useRevealWhenPicked(selection)
-  return (
+  const button = (
     <button
-      ref={ref}
       type="button"
-      title={point.noise ? NOISE[point.noise] : undefined}
       onClick={() =>
         onSelect({
           latitude: point.latitude,
@@ -219,7 +265,7 @@ function PointRow({
       }
       className={cn(
         ROW,
-        selected && "bg-primary/15",
+        highlighted && "bg-primary/15",
         point.noise && "opacity-60"
       )}
     >
@@ -232,5 +278,17 @@ function PointRow({
         {point.accuracy_m != null && ` · ±${point.accuracy_m} m`}
       </span>
     </button>
+  )
+
+  // The reason a report is judged unlikely is cut off in the row, so it needs to be reachable
+  // by touch and keyboard too — a `title` is neither.
+  if (!point.noise) return button
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      <TooltipContent side="left" className="max-w-56">
+        Hidden as unlikely: {NOISE[point.noise].toLowerCase()}.
+      </TooltipContent>
+    </Tooltip>
   )
 }
