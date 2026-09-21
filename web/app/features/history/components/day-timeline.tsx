@@ -1,4 +1,4 @@
-import { useVirtualizer } from "@tanstack/react-virtual"
+import { type Range, useVirtualizer } from "@tanstack/react-virtual"
 import { MapPinIcon, MapPinnedIcon, TriangleAlertIcon } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef } from "react"
 
@@ -85,10 +85,12 @@ export function DayTimeline({ points, stays, selection, onSelect }: Props) {
       rows[i].type === "day" ? ESTIMATE.day : ESTIMATE.entry,
     overscan: 12,
     rangeExtractor: useCallback(
-      (range: { startIndex: number; endIndex: number; overscan: number }) => {
+      (range: Range) => {
         const visible = new Set<number>([stickyFor(range.startIndex)])
         const start = Math.max(0, range.startIndex - range.overscan)
-        const end = range.endIndex + range.overscan
+        // Clamp like TanStack's default extractor: an index past the end has no measurement,
+        // so getVirtualItems() would hand back `undefined` for it.
+        const end = Math.min(range.endIndex + range.overscan, range.count - 1)
         for (let i = start; i <= end; i++) visible.add(i)
         return [...visible].sort((a, b) => a - b)
       },
