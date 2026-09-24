@@ -1,5 +1,5 @@
 import { ExternalLinkIcon, InfoIcon } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { type ReactNode, useEffect, useRef } from "react"
 import { Link, useRevalidator } from "react-router"
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
@@ -14,17 +14,26 @@ import { ROUTING_GUIDE } from "../labels"
 const PENDING_RETRY_MS = 2_000
 
 /**
- * What stands between history and its road routes, if anything: routing not set up, the engine
- * busy or unreachable, trips still being matched, or trips with no roads in the map data.
+ * What stands between history and its road routes, if anything: the first answer still on its
+ * way (`routes` unknown while `loading`), routing not set up, the engine busy or unreachable,
+ * trips still being matched, or trips with no roads in the map data.
  */
 export function RoutesNotice({
   routes,
+  loading = false,
   className,
 }: {
-  routes: RoadRoutes
+  routes: RoadRoutes | undefined
+  loading?: boolean
   className?: string
 }) {
-  useRetryWhile(routes.pending > 0, routes)
+  useRetryWhile((routes?.pending ?? 0) > 0, routes)
+
+  if (!routes) {
+    return loading ? (
+      <Finding className={className}>Finding the roads…</Finding>
+    ) : null
+  }
   const noRoads = routes.trips.filter((t) => t.fallback === "no_roads").length
 
   if (routes.state === "off" || routes.state === "unavailable") {
@@ -60,16 +69,10 @@ export function RoutesNotice({
   }
   if (routes.pending > 0) {
     return (
-      <p
-        className={cn(
-          "pointer-events-auto flex items-center gap-2 text-xs text-muted-foreground",
-          className
-        )}
-      >
-        <Spinner className="size-3" />
+      <Finding className={className}>
         Finding the roads for {routes.pending} more trip
         {routes.pending === 1 ? "" : "s"}…
-      </p>
+      </Finding>
     )
   }
   if (noRoads > 0) {
@@ -89,6 +92,26 @@ export function RoutesNotice({
     )
   }
   return null
+}
+
+function Finding({
+  className,
+  children,
+}: {
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <p
+      className={cn(
+        "pointer-events-auto flex items-center gap-2 text-xs text-muted-foreground",
+        className
+      )}
+    >
+      <Spinner className="size-3" />
+      {children}
+    </p>
+  )
 }
 
 /** Load the page again shortly, after each answer that still has trips being matched. */

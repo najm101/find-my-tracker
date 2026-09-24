@@ -1,4 +1,5 @@
-import { api, unwrap, type Schemas } from "~/lib/api/client"
+import { ApiError, api, unwrap, type Schemas } from "~/lib/api/client"
+import type { RoadRoutes } from "~/lib/road-routes"
 
 export function getRouting() {
   return unwrap(api.GET("/api/routing"))
@@ -51,4 +52,19 @@ export function getRoutes(f: RouteFilters) {
       },
     })
   )
+}
+
+/**
+ * `getRoutes` for a loader that doesn't wait for it: history shows at once and the roads follow.
+ * Matching can take a while. Nothing awaits this promise to catch a failure, so it never rejects:
+ * a failure becomes an "unavailable" answer that says why.
+ */
+export function startRoutes(f: RouteFilters): Promise<RoadRoutes> {
+  return getRoutes(f).catch((e: unknown): RoadRoutes => ({
+    state: "unavailable",
+    message:
+      e instanceof ApiError ? e.message : "Couldn't load the road routes.",
+    trips: [],
+    pending: 0,
+  }))
 }

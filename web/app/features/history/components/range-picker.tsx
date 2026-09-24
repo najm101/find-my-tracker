@@ -21,6 +21,7 @@ import {
   isLatest,
   shiftRange,
 } from "~/lib/time-range"
+import { cn } from "~/lib/utils"
 
 type Props = {
   range: TimeRange
@@ -28,13 +29,21 @@ type Props = {
   now: number
   onPreset: (preset: RangePreset) => void
   onCustom: (from: Date, to: Date) => void
+  /** Stretch across its container: the window button takes the room between the arrows. */
+  fill?: boolean
 }
 
 /**
  * The history window: a "last …" preset, or days and times of your own. The arrows beside it
  * step to the window of the same length before or after.
  */
-export function RangePicker({ range, now, onPreset, onCustom }: Props) {
+export function RangePicker({
+  range,
+  now,
+  onPreset,
+  onCustom,
+  fill = false,
+}: Props) {
   const id = useId()
   const [open, setOpen] = useState(false)
   const [days, setDays] = useState<DateRange | undefined>()
@@ -68,7 +77,7 @@ export function RangePicker({ range, now, onPreset, onCustom }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className={cn("flex items-center gap-0.5", fill && "w-full")}>
       <Button
         variant="ghost"
         size="icon-sm"
@@ -80,7 +89,11 @@ export function RangePicker({ range, now, onPreset, onCustom }: Props) {
       </Button>
       <Popover open={open} onOpenChange={openChange}>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(fill && "min-w-0 flex-1")}
+          >
             <CalendarIcon />
             {describeRange(range)}
           </Button>

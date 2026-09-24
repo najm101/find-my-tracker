@@ -1,5 +1,6 @@
 import { EyeIcon, EyeOffIcon } from "lucide-react"
 
+import { Button } from "~/components/ui/button"
 import { Toggle } from "~/components/ui/toggle"
 import {
   Tooltip,
@@ -13,21 +14,44 @@ type Props = {
   onPressedChange: (pressed: boolean) => void
 }
 
-/** Shows or hides the reports judged noisy. Hidden when there are none. */
-export function NoiseToggle({ pressed, hiddenCount, onPressedChange }: Props) {
+/**
+ * Shows or hides the reports judged noisy. Hidden when there are none. `inline` makes it a link
+ * that reads as part of a sentence ("12 unlikely hidden").
+ */
+export function NoiseToggle({
+  pressed,
+  hiddenCount,
+  onPressedChange,
+  inline = false,
+}: Props & { inline?: boolean }) {
   if (hiddenCount === 0) return null
+  const count = hiddenCount.toLocaleString()
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Toggle
-          size="sm"
-          variant="outline"
-          pressed={pressed}
-          onPressedChange={onPressedChange}
-        >
-          {pressed ? <EyeIcon /> : <EyeOffIcon />}
-          {hiddenCount.toLocaleString()} unlikely
-        </Toggle>
+        {inline ? (
+          <Button
+            variant="link"
+            size="xs"
+            aria-pressed={pressed}
+            className="h-auto p-0 text-xs text-muted-foreground underline"
+            onClick={() => onPressedChange(!pressed)}
+          >
+            {pressed
+              ? `Hide the ${count} unlikely`
+              : `${count} unlikely hidden`}
+          </Button>
+        ) : (
+          <Toggle
+            size="sm"
+            variant="outline"
+            pressed={pressed}
+            onPressedChange={onPressedChange}
+          >
+            {pressed ? <EyeIcon /> : <EyeOffIcon />}
+            {count} unlikely
+          </Toggle>
+        )}
       </TooltipTrigger>
       <TooltipContent className="max-w-64">
         Reports that are probably not where the item was: usually a passing

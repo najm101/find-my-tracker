@@ -192,6 +192,11 @@ describe("RoutesNotice", () => {
     ).toBeInTheDocument()
   })
 
+  it("says the roads are being found before the first answer", () => {
+    renderRouted(<RoutesNotice routes={undefined} loading />)
+    expect(screen.getByText("Finding the roads…")).toBeInTheDocument()
+  })
+
   it("says nothing when all is well", () => {
     const { container } = renderRouted(<RoutesNotice routes={routes({})} />)
     expect(container).toBeEmptyDOMElement()

@@ -21,18 +21,29 @@ export function ExportMenu({ filters }: { filters: HistoryFilters }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Download what&apos;s shown</DropdownMenuLabel>
-        <DropdownMenuItem asChild>
-          <a href={exportHref(filters, "csv")} download>
-            CSV (spreadsheets)
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <a href={exportHref(filters, "geojson")} download>
-            GeoJSON (maps, GIS)
-          </a>
-        </DropdownMenuItem>
+        <ExportMenuItems filters={filters} />
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+/** The export choices, for a menu of someone else's (the item page's "more" menu). */
+export function ExportMenuItems({ filters }: { filters: HistoryFilters }) {
+  return (
+    <>
+      <DropdownMenuLabel>Download what&apos;s shown</DropdownMenuLabel>
+      <DropdownMenuItem asChild>
+        <a href={exportHref(filters, "csv")} download>
+          <DownloadIcon />
+          CSV (spreadsheets)
+        </a>
+      </DropdownMenuItem>
+      <DropdownMenuItem asChild>
+        <a href={exportHref(filters, "geojson")} download>
+          <DownloadIcon />
+          GeoJSON (maps, GIS)
+        </a>
+      </DropdownMenuItem>
+    </>
   )
 }

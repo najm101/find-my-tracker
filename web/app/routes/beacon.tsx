@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, PlayIcon } from "lucide-react"
+import { EllipsisIcon, PencilIcon, PlayIcon, XIcon } from "lucide-react"
 import { useState } from "react"
 import { Link, useSearchParams } from "react-router"
 
@@ -9,12 +9,21 @@ import {
   CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "~/components/ui/card"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
+import { BeaconEditDialog } from "~/features/beacons/components/beacon-edit-dialog"
 import { getLocations } from "~/features/history/api/locations"
 import { DayTimeline } from "~/features/history/components/day-timeline"
-import { ExportMenu } from "~/features/history/components/export-menu"
+import { ExportMenuItems } from "~/features/history/components/export-menu"
 import { NoiseToggle } from "~/features/history/components/noise-toggle"
 import {
   PLAYBACK_BAR_INSET,
@@ -28,9 +37,11 @@ import {
   type MapFocus,
   TrackerLayers,
 } from "~/features/map/components/tracker-layers"
-import { getRoutes } from "~/features/routing/api/routing"
+import { startRoutes } from "~/features/routing/api/routing"
 import { RouteModeToggle } from "~/features/routing/components/route-mode-toggle"
 import { RoutesNotice } from "~/features/routing/components/routes-notice"
+import { usePendingSearchParams } from "~/hooks/use-pending-search-params"
+import { useSettled } from "~/hooks/use-settled"
 import type { Schemas } from "~/lib/api/client"
 import { BEACON_KINDS } from "~/lib/beacon-kind"
 import { buildClock, buildTracks, reportIndexAt } from "~/lib/playback"
@@ -57,21 +68,30 @@ export async function clientLoader({
   const range = rangeFromParams(search)
   const beaconId = Number(params.beaconId)
   const filters = { from: range.from, to: range.to, beaconIds: [beaconId] }
-  const [history, routes] = await Promise.all([
-    getLocations(filters),
-    getRouteMode(search) === "reported" ? null : getRoutes(filters),
-  ])
+  // Road routes can take a while to match: the page shows without them and they follow.
+  const routes =
+    getRouteMode(search) === "reported" ? null : startRoutes(filters)
+  const history = await getLocations(filters)
   return { beaconId, range, history, routes }
 }
 
 export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
-  const { beaconId, range, history, routes } = loaderData
+  const { beaconId, range, history } = loaderData
   const { beacons, loadedAt } = useLayoutData()
   const [params, setParams] = useSearchParams()
   const [focus, setFocus] = useState<MapFocus | null>(null)
+  const [editing, setEditing] = useState(false)
   const showNoise = getShowNoise(params)
   const beacon = beacons.find((b) => b.id === beaconId)
   const routeMode = getRouteMode(params)
+  const { value: routes, loading: routesLoading } = useSettled(
+    loaderData.routes,
+    `${beaconId}|${rangeKey(range)}`
+  )
+  // The path mode just picked shows at once, with a spinner until its roads are drawn.
+  const shownMode = getRouteMode(usePendingSearchParams())
+  const findingRoads =
+    shownMode !== "reported" && (routesLoading || shownMode !== routeMode)
   const roads =
     routeMode !== "reported" && routes?.state === "ok"
       ? routes.trips
@@ -171,76 +191,74 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
         </>
       )}
       <SidePanel>
-        <Card className="flex min-h-0 w-full flex-col gap-4 rounded-none border-0 border-t md:h-svh md:w-96 md:border-t-0 md:border-l">
+        <Card className="flex min-h-0 w-full flex-col gap-3 rounded-none border-0 border-t md:h-svh md:w-96 md:border-t-0 md:border-l">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex min-w-0 items-center gap-2">
               <span
-                className="flex size-7 items-center justify-center rounded-full text-white"
+                className="flex size-7 shrink-0 items-center justify-center rounded-full text-white"
                 style={{ backgroundColor: beacon.color ?? "#2563eb" }}
               >
-                <kind.icon className="size-4" />
+                {beacon.emoji ? (
+                  <span className="text-sm">{beacon.emoji}</span>
+                ) : (
+                  <kind.icon className="size-4" />
+                )}
               </span>
-              {beacon.name}
+              <span className="truncate">{beacon.name}</span>
             </CardTitle>
             <CardDescription className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">{kind.label}</Badge>
-              {beacon.location_count.toLocaleString()} sightings stored
+              {beacon.location_count.toLocaleString()} stored
             </CardDescription>
-            <CardAction>
-              <Button
-                asChild
-                variant="ghost"
-                size="icon-sm"
-                title="Back to the map"
-              >
+            <CardAction className="flex items-center gap-0.5">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon-sm" aria-label="More">
+                    <EllipsisIcon />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onSelect={() => setEditing(true)}>
+                    <PencilIcon />
+                    Edit item
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <ExportMenuItems filters={filters} />
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button asChild variant="ghost" size="icon-sm" aria-label="Close">
                 <Link to={{ pathname: "/", search: params.toString() }}>
-                  <ArrowLeftIcon />
+                  <XIcon />
                 </Link>
               </Button>
             </CardAction>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <RangePicker
-                range={range}
-                now={loadedAt}
-                onPreset={(preset) => setParams(withRange(params, { preset }))}
-                onCustom={(from, to) =>
-                  setParams(withRange(params, { from, to }))
-                }
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!player.playable}
-                onClick={player.play}
-              >
-                <PlayIcon />
-                Play
-              </Button>
-              <RouteModeToggle
-                mode={routeMode}
-                onMode={(m) => setParams(withRouteMode(params, m))}
-              />
-              <ExportMenu filters={filters} />
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-2">
+            <RangePicker
+              fill
+              range={range}
+              now={loadedAt}
+              onPreset={(preset) => setParams(withRange(params, { preset }))}
+              onCustom={(from, to) =>
+                setParams(withRange(params, { from, to }))
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              {good.length.toLocaleString()} sighting
+              {good.length === 1 ? "" : "s"} in this range
+              {history.truncated && " (limit reached, narrow the range)"}
+              {noisyCount > 0 && " · "}
               <NoiseToggle
+                inline
                 pressed={showNoise}
                 hiddenCount={noisyCount}
                 onPressedChange={(on) => setParams(withShowNoise(params, on))}
               />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {good.length.toLocaleString()} sighting
-              {good.length === 1 ? "" : "s"} in this range
-              {noisyCount > 0 &&
-                !showNoise &&
-                `, ${noisyCount.toLocaleString()} unlikely hidden`}
-              {history.truncated && " (limit reached, narrow the range)"}
               {offRoute > 0 &&
-                `. ${offRoute.toLocaleString()} off the likely route (hollow dots)`}
+                ` · ${offRoute.toLocaleString()} off the likely route (hollow dots)`}
             </p>
-            {routeMode !== "reported" && routes && (
-              <RoutesNotice routes={routes} />
+            {shownMode !== "reported" && (
+              <RoutesNotice routes={routes} loading={findingRoads} />
             )}
             <DayTimeline
               points={points}
@@ -253,8 +271,28 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
               }
             />
           </CardContent>
+          <CardFooter className="gap-2">
+            <RouteModeToggle
+              mode={shownMode}
+              busy={findingRoads}
+              onMode={(m) => setParams(withRouteMode(params, m))}
+            />
+            <Button
+              size="sm"
+              className="ml-auto"
+              disabled={!player.playable}
+              onClick={player.play}
+            >
+              <PlayIcon />
+              Play
+            </Button>
+          </CardFooter>
         </Card>
       </SidePanel>
+      <BeaconEditDialog
+        beacon={editing ? beacon : null}
+        onOpenChange={setEditing}
+      />
     </>
   )
 }

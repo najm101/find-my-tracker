@@ -15,9 +15,11 @@ import {
 import { usePlayback } from "~/features/history/hooks/use-playback"
 import { PlaybackLayer } from "~/features/map/components/playback-layer"
 import { TrackerLayers } from "~/features/map/components/tracker-layers"
-import { getRoutes } from "~/features/routing/api/routing"
+import { startRoutes } from "~/features/routing/api/routing"
 import { RouteModeToggle } from "~/features/routing/components/route-mode-toggle"
 import { RoutesNotice } from "~/features/routing/components/routes-notice"
+import { usePendingSearchParams } from "~/hooks/use-pending-search-params"
+import { useSettled } from "~/hooks/use-settled"
 import { buildClock, buildTracks } from "~/lib/playback"
 import {
   getHidden,
@@ -42,19 +44,18 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const mode = getMode(params)
   const range = rangeFromParams(params)
   const roads = mode === "history" && getRouteMode(params) !== "reported"
+  // Road routes can take a while to match: the page shows without them and they follow.
+  const routes = roads ? startRoutes({ from: range.from, to: range.to }) : null
   // History for every beacon at once; hiding is applied client-side so toggling is instant.
-  const [history, routes] =
+  const history =
     mode === "history"
-      ? await Promise.all([
-          getLocations({ from: range.from, to: range.to }),
-          roads ? getRoutes({ from: range.from, to: range.to }) : null,
-        ])
-      : [null, null]
+      ? await getLocations({ from: range.from, to: range.to })
+      : null
   return { mode, range, history, routes }
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { mode, range, history, routes } = loaderData
+  const { mode, range, history } = loaderData
   const { beacons, loadedAt } = useLayoutData()
   const [params, setParams] = useSearchParams()
   const hidden = getHidden(params)
@@ -64,6 +65,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const shown = history?.points.filter((p) => !hidden.has(p.beacon_id))
   const good = shown?.filter((p) => !p.noise)
   const routeMode = getRouteMode(params)
+  const { value: routes, loading: routesLoading } = useSettled(
+    loaderData.routes,
+    rangeKey(range)
+  )
+  // The path mode just picked shows at once, with a spinner until its roads are drawn.
+  const shownMode = getRouteMode(usePendingSearchParams())
+  const findingRoads =
+    shownMode !== "reported" && (routesLoading || shownMode !== routeMode)
   const roads =
     routeMode !== "reported" && routes?.state === "ok"
       ? routes.trips
@@ -120,13 +129,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           canPlay={player.playable}
           extra={
             <RouteModeToggle
-              mode={routeMode}
+              mode={shownMode}
+              busy={findingRoads}
               onMode={(m) => setParams(withRouteMode(params, m))}
             />
           }
         />
-        {mode === "history" && routeMode !== "reported" && routes && (
-          <RoutesNotice routes={routes} className="max-w-sm bg-background/95" />
+        {mode === "history" && shownMode !== "reported" && (
+          <RoutesNotice
+            routes={routes}
+            loading={findingRoads}
+            className="max-w-sm bg-background/95"
+          />
         )}
       </div>
       {!located && (
