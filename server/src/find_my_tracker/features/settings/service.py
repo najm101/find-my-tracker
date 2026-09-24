@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from find_my_tracker.features.settings.repository import SettingsRepository
@@ -15,6 +17,14 @@ class SettingsService:
         stored = await self._repo.all()
         known = {k: v for k, v in stored.items() if k in AppSettings.model_fields}
         return AppSettings.model_validate(known)
+
+    async def value(self, key: str, default: Any = None) -> Any:
+        """A value kept by another feature under its own key (not part of `AppSettings`)."""
+        return (await self._repo.all()).get(key, default)
+
+    async def put_values(self, values: dict[str, Any]) -> None:
+        """Stores another feature's values. Does not commit."""
+        await self._repo.put(values)
 
     async def update(self, patch: SettingsUpdate) -> AppSettings:
         changes = patch.model_dump(exclude_none=True)

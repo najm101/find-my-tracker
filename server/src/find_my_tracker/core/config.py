@@ -61,9 +61,23 @@ class Settings(BaseSettings):
     # who finds the address.
     expose_api_docs: bool = False
 
+    # ---- road routes (see README: "Road routes") ----
+    # A Valhalla server to snap history to roads, e.g. http://valhalla:8002 for a container next to
+    # this one. Set here, it is fixed: Settings shows it and cannot change it. Unset: chosen in
+    # Settings, where the built-in engine is the other option.
+    routing_url: str | None = None
+    # The built-in engine's service listens on this loopback port...
+    routing_builtin_port: int = 8002
+    # ...and builds road data with this many threads (more is faster, and uses more memory).
+    routing_build_threads: int = 2
+
     @property
     def database_path(self) -> Path:
         return self.data_dir / "tracker.db"
+
+    @property
+    def routing_dir(self) -> Path:
+        return self.data_dir / "routing"
 
     @property
     def anisette_libs_path(self) -> Path:

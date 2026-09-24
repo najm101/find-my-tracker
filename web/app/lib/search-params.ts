@@ -1,6 +1,6 @@
 /**
- * Map-view state kept in the URL: which beacons are hidden, latest vs history, and whether
- * history includes the reports judged noisy.
+ * Map-view state kept in the URL: which beacons are hidden, latest vs history, whether history
+ * includes the reports judged noisy, and whether its path follows roads.
  */
 
 export type MapMode = "latest" | "history"
@@ -53,5 +53,23 @@ export function withShowNoise(
   const next = new URLSearchParams(params)
   if (show) next.set("noise", "show")
   else next.delete("noise")
+  return next
+}
+
+/** How history's path is drawn: as reported, snapped to roads, or both on top of each other. */
+export type RouteMode = "reported" | "both" | "road"
+
+export function getRouteMode(params: URLSearchParams): RouteMode {
+  const value = params.get("route")
+  return value === "both" || value === "road" ? value : "reported"
+}
+
+export function withRouteMode(
+  params: URLSearchParams,
+  mode: RouteMode
+): URLSearchParams {
+  const next = new URLSearchParams(params)
+  if (mode === "reported") next.delete("route")
+  else next.set("route", mode)
   return next
 }

@@ -15,12 +15,17 @@ import {
 import { usePlayback } from "~/features/history/hooks/use-playback"
 import { PlaybackLayer } from "~/features/map/components/playback-layer"
 import { TrackerLayers } from "~/features/map/components/tracker-layers"
+import { getRoutes } from "~/features/routing/api/routing"
+import { RouteModeToggle } from "~/features/routing/components/route-mode-toggle"
+import { RoutesNotice } from "~/features/routing/components/routes-notice"
 import { buildClock, buildTracks } from "~/lib/playback"
 import {
   getHidden,
   getMode,
+  getRouteMode,
   getShowNoise,
   withMode,
+  withRouteMode,
   withShowNoise,
 } from "~/lib/search-params"
 import { rangeFromParams, rangeKey, withRange } from "~/lib/time-range"
@@ -36,16 +41,20 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const params = new URL(request.url).searchParams
   const mode = getMode(params)
   const range = rangeFromParams(params)
+  const roads = mode === "history" && getRouteMode(params) !== "reported"
   // History for every beacon at once; hiding is applied client-side so toggling is instant.
-  const history =
+  const [history, routes] =
     mode === "history"
-      ? await getLocations({ from: range.from, to: range.to })
-      : null
-  return { mode, range, history }
+      ? await Promise.all([
+          getLocations({ from: range.from, to: range.to }),
+          roads ? getRoutes({ from: range.from, to: range.to }) : null,
+        ])
+      : [null, null]
+  return { mode, range, history, routes }
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
-  const { mode, range, history } = loaderData
+  const { mode, range, history, routes } = loaderData
   const { beacons, loadedAt } = useLayoutData()
   const [params, setParams] = useSearchParams()
   const hidden = getHidden(params)
@@ -54,7 +63,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const showNoise = getShowNoise(params)
   const shown = history?.points.filter((p) => !hidden.has(p.beacon_id))
   const good = shown?.filter((p) => !p.noise)
-  const tracks = buildTracks(good ?? [], history?.stays ?? [])
+  const routeMode = getRouteMode(params)
+  const roads =
+    routeMode !== "reported" && routes?.state === "ok"
+      ? routes.trips
+      : undefined
+  // Playback follows the roads whenever they are on the map.
+  const tracks = buildTracks(good ?? [], history?.stays ?? [], roads)
   const clock = buildClock(tracks)
   const player = usePlayback(clock, `${mode}|${rangeKey(range)}`)
   const playing = mode === "history" && player.open
@@ -66,6 +81,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         points={showNoise ? history?.points : good}
         fitKey={`home|${mode}|${rangeKey(range)}`}
         backdrop={playing}
+        pathMode={routeMode}
+        roads={roads}
         now={loadedAt}
       />
       {playing && (
@@ -81,7 +98,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <PlaybackBar clock={clock} player={player} />
         </>
       )}
-      <div className="pointer-events-none absolute top-3 left-3 z-10">
+      <div className="pointer-events-none absolute top-3 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-col items-start gap-2">
         <HistoryToolbar
           mode={mode}
           range={range}
@@ -101,7 +118,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           onShowNoise={(on) => setParams(withShowNoise(params, on))}
           onPlay={player.play}
           canPlay={player.playable}
+          extra={
+            <RouteModeToggle
+              mode={routeMode}
+              onMode={(m) => setParams(withRouteMode(params, m))}
+            />
+          }
         />
+        {mode === "history" && routeMode !== "reported" && routes && (
+          <RoutesNotice routes={routes} className="max-w-sm bg-background/95" />
+        )}
       </div>
       {!located && (
         <Card className="absolute bottom-6 left-1/2 z-10 w-[min(24rem,calc(100%-2rem))] -translate-x-1/2">

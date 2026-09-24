@@ -101,8 +101,9 @@ export function BeaconSettings({ beacons }: { beacons: Beacon[] }) {
                   <ItemContent>
                     <ItemTitle>{beacon.name}</ItemTitle>
                     <ItemDescription>
-                      {kind.label} · {beacon.location_count.toLocaleString()}{" "}
-                      sightings
+                      {kind.label}
+                      {beacon.vehicle && " in a vehicle"} ·{" "}
+                      {beacon.location_count.toLocaleString()} sightings
                       {beacon.name !== beacon.apple_name && (
                         <> · Apple calls it “{beacon.apple_name}”</>
                       )}

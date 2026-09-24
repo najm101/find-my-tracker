@@ -12,12 +12,14 @@ import {
 } from "~/components/ui/dialog"
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
 } from "~/components/ui/field"
 import { Input } from "~/components/ui/input"
 import { Spinner } from "~/components/ui/spinner"
+import { Switch } from "~/components/ui/switch"
 import { useMutation } from "~/hooks/use-mutation"
 import type { Schemas } from "~/lib/api/client"
 import { BEACON_COLORS, DEFAULT_BEACON_COLOR } from "~/lib/beacon-kind"
@@ -27,7 +29,7 @@ import { updateBeacon } from "../api/beacons"
 
 type Beacon = Schemas["BeaconOut"]
 
-/** Rename an item, give it an emoji, and pick its colour on the map. */
+/** Rename an item, give it an emoji, pick its colour on the map, and say if it's in a vehicle. */
 export function BeaconEditDialog({
   beacon,
   onOpenChange,
@@ -58,6 +60,7 @@ function EditForm({ beacon, onDone }: { beacon: Beacon; onDone: () => void }) {
   )
   const [emoji, setEmoji] = useState(beacon.emoji ?? "")
   const [color, setColor] = useState(beacon.color ?? DEFAULT_BEACON_COLOR)
+  const [vehicle, setVehicle] = useState(beacon.vehicle)
 
   return (
     <form
@@ -69,6 +72,7 @@ function EditForm({ beacon, onDone }: { beacon: Beacon; onDone: () => void }) {
               display_name: name.trim(),
               emoji: emoji.trim(),
               color,
+              vehicle,
             }),
           "Item saved."
         )
@@ -138,6 +142,20 @@ function EditForm({ beacon, onDone }: { beacon: Beacon; onDone: () => void }) {
           <FieldDescription>
             Used for this item&apos;s pin and path on the map.
           </FieldDescription>
+        </Field>
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel htmlFor="beacon-vehicle">Lives in a vehicle</FieldLabel>
+            <FieldDescription>
+              For an item left in a car, bike or van. Road routes then follow
+              roads a car can use, however slowly it seemed to move.
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="beacon-vehicle"
+            checked={vehicle}
+            onCheckedChange={setVehicle}
+          />
         </Field>
       </FieldGroup>
       <DialogFooter>

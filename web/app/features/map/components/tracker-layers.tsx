@@ -2,10 +2,13 @@ import { useEffect, useMemo } from "react"
 
 import { MapMarker, MarkerContent, useMap } from "~/components/ui/map"
 import type { Schemas } from "~/lib/api/client"
+import { type RoadTrip, offRouteKeys } from "~/lib/road-routes"
+import type { RouteMode } from "~/lib/search-params"
 
 import { BeaconMarker } from "./beacon-marker"
 import { FitToData, moveTo } from "./fit-to-data"
 import { PathLayer, type Segment } from "./path-layer"
+import { RoadRouteLayer } from "./road-route-layer"
 import { SightingsLayer } from "./sightings-layer"
 
 type Beacon = Schemas["BeaconOut"]
@@ -43,6 +46,10 @@ type Props = {
    * playback draws its own moving ones.
    */
   backdrop?: boolean
+  /** Draw the path as reported, along the roads (`roads`), or both. */
+  pathMode?: RouteMode
+  /** History snapped to roads, for `pathMode` "road" and "both". */
+  roads?: RoadTrip[]
   /** Called when a history dot is clicked. */
   onPick?: (point: Point) => void
   /** Called when a path segment is clicked (its popup shows either way). */
@@ -60,6 +67,8 @@ export function TrackerLayers({
   framePadding,
   focus,
   backdrop = false,
+  pathMode = "reported",
+  roads,
   onPick,
   onPickSegment,
   now,
@@ -101,17 +110,30 @@ export function TrackerLayers({
     <>
       {points && (
         <>
-          <PathLayer
-            points={goodPoints}
-            colors={colors}
-            selectedId={selectedId}
-            faded={backdrop}
-            onPick={onPickSegment}
-          />
+          {pathMode !== "road" && (
+            <PathLayer
+              points={goodPoints}
+              colors={colors}
+              selectedId={selectedId}
+              faded={backdrop || (pathMode === "both" && !!roads)}
+              onPick={onPickSegment}
+            />
+          )}
+          {pathMode !== "reported" && roads && (
+            <RoadRouteLayer
+              trips={roads.filter((t) => visibleIds.has(t.beacon_id))}
+              colors={colors}
+              selectedId={selectedId}
+              faded={backdrop}
+            />
+          )}
           <SightingsLayer
             points={visiblePoints}
             colors={colors}
             faded={backdrop}
+            offRoute={
+              pathMode !== "reported" && roads ? offRouteKeys(roads) : undefined
+            }
             onPick={onPick}
           />
         </>

@@ -62,6 +62,10 @@ Android and don't want to run a server, use OpenTagViewer. It's great.
   report while the path fills in behind it; drag the scrubber to jump around, step report by
   report, or change the speed. Movement plays in about half a minute, and stays and stretches
   without reports are fast-forwarded
+- **Road routes** (optional): the roads an item most likely took between its reports, instead of
+  straight lines. Show them over the reported path, or on their own; playback follows them. Runs
+  on your own server, on map data it downloads for the places your items go. See
+  [Road routes](#road-routes)
 - **Clean history**: a report's position is the position of the stranger's iPhone that heard
   your item, so some land far off. Reports that disagree with the ones around them are hidden
   (one click shows them again), and time spent in one place collapses into a single
@@ -177,6 +181,8 @@ update: `docker compose pull && docker compose up -d`. Migrations run automatica
 | `PORT` | no | `8080` | |
 | `LOG_LEVEL` | no | `INFO` | |
 | `DEMO_MODE` | no | `false` | Fake Apple account with demo data. See below |
+| `ROUTING_URL` | no | | A [Valhalla](https://github.com/valhalla/valhalla) server for road routes, e.g. `http://valhalla:8002`. Set here, Settings shows it and can't change it. Unset: choose in Settings. See [Road routes](#road-routes) |
+| `ROUTING_BUILD_THREADS` | no | `2` | Threads the built-in routing engine uses to prepare map data. More is faster and needs more memory |
 
 These only matter once something outside your network can reach the dashboard:
 
@@ -192,6 +198,67 @@ These only matter once something outside your network can reach the dashboard:
 Everything lives in the mounted `data/` folder (`tracker.db` plus an anisette cache): back it up
 together with your `SECRET_KEY`. With `DATABASE_URL` set, back up that database instead
 (`pg_dump`), and `data/` then only holds the anisette cache.
+
+## Road routes
+
+A report is where a stranger's phone was when it heard your item, so a drive drawn report to
+report cuts across blocks, and a phone on the road next to yours puts your car on a side street.
+Road routes snap the history to the roads it most likely took. This is called *map matching*,
+and it uses every report on a trip as evidence rather than as a stop. So one stray report doesn't
+drag the route down a side street and back; a report no road comes near is left off and shown as
+a hollow dot.
+
+It is a best guess, not a record. On main roads with a report every few minutes it is usually
+right. Between reports far apart, and in dense streets, it picks the likeliest way. It can't tell
+a flyover from the street under it without enough reports either side. In simulated drives around
+Giza and Cairo (reports every 2 to 7 minutes, one in five pushed 60 to 150 m sideways), 84% of the
+suggested route was on the road actually driven, against 15% of the straight lines. Gaps of more
+than 30 minutes stay dashed: nothing says how that stretch went.
+
+Turn it on in **Settings → Road routes**. There are two ways.
+
+**Built in.** This server does it: it downloads [OpenStreetMap](https://www.openstreetmap.org)
+map data from [Geofabrik](https://download.geofabrik.de) for the places your items go, prepares
+it, and runs [Valhalla](https://github.com/valhalla/valhalla), the open-source routing engine,
+inside the app's own container. Nothing else to install.
+
+- With **Download map data automatically** on, a country (or a state, where Geofabrik splits the
+  country) is fetched as soon as recent history reaches it. Anything over 1.5 GB waits for you.
+  Add or remove regions yourself in the same place, and **Update maps** now and then: roads
+  change.
+- Preparing a region takes a minute or two and about 2 GB of memory while it runs; afterwards
+  routing is light. Egypt, for example, is a 178 MB download that becomes 740 MB of road data.
+  If the container has less memory, set `ROUTING_BUILD_THREADS=1`.
+- Only the map download leaves your server. Your items' positions never do.
+
+**Another Valhalla server.** Run Valhalla yourself, for example next to this app in
+`compose.yaml`, and point the app at it with `ROUTING_URL` (or enter the address in Settings):
+
+```yaml
+services:
+  valhalla:
+    image: ghcr.io/valhalla/valhalla-scripted:3.9.0
+    environment:
+      # Space-separated: every region your items go to.
+      tile_urls: https://download.geofabrik.de/africa/egypt-latest.osm.pbf
+    volumes:
+      - ./valhalla:/custom_files
+    restart: unless-stopped
+
+  find-my-tracker:
+    environment:
+      ROUTING_URL: http://valhalla:8002
+```
+
+One setting matters: Valhalla only connects reports up to 2 km apart unless told otherwise, and a
+car's reports are often further apart than that. After the first start, set
+`"breakage_distance": 100000` under `meili.default` in `valhalla/valhalla.json`, and restart the
+container. (The built-in engine does this for you.) Map data for a server like this is managed
+where it runs; Settings shows whether it is reachable.
+
+**Items in vehicles.** For an item left in a car, open it in **Settings → Items** and turn on
+**Lives in a vehicle**: its trips are matched to roads a car can use, however slowly it seemed to
+move. Anything else is matched on foot, unless a trip moved like a vehicle (faster than 25 km/h).
 
 ## Putting it on the internet 🌐
 

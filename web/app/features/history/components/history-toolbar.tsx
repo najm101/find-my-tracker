@@ -1,4 +1,5 @@
 import { PlayIcon } from "lucide-react"
+import type { ReactNode } from "react"
 
 import { MapPanel } from "~/components/map-panel"
 import { Button } from "~/components/ui/button"
@@ -28,6 +29,8 @@ type Props = {
   /** Play the range back; the button is disabled without `canPlay`. */
   onPlay?: () => void
   canPlay?: boolean
+  /** More history controls, after the range (e.g. how the path is drawn). */
+  extra?: ReactNode
 }
 
 /** Floating map toolbar: latest vs history, the time range, playback and export. */
@@ -46,6 +49,7 @@ export function HistoryToolbar({
   onShowNoise,
   onPlay,
   canPlay = false,
+  extra,
 }: Props) {
   return (
     <MapPanel className="flex-wrap">
@@ -67,6 +71,7 @@ export function HistoryToolbar({
             onPreset={onPreset}
             onCustom={onCustom}
           />
+          {extra}
           {onPlay && (
             <Button
               variant="outline"

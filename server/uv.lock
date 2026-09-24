@@ -494,9 +494,10 @@ wheels = [
 
 [[package]]
 name = "find-my-tracker"
-version = "0.6.0"
+version = "0.7.0"
 source = { editable = "." }
 dependencies = [
+    { name = "aiohttp" },
     { name = "aiosqlite" },
     { name = "alembic" },
     { name = "argon2-cffi" },
@@ -507,6 +508,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyotp" },
+    { name = "pyvalhalla" },
     { name = "qrcode" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "uvicorn", extra = ["standard"] },
@@ -523,6 +525,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiohttp", specifier = ">=3.14,<4" },
     { name = "aiosqlite", specifier = ">=0.21" },
     { name = "alembic", specifier = ">=1.16" },
     { name = "argon2-cffi", specifier = ">=25.1" },
@@ -533,6 +536,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.13.5,<3" },
     { name = "pydantic-settings", specifier = ">=2.11,<3" },
     { name = "pyotp", specifier = ">=2.9" },
+    { name = "pyvalhalla", specifier = ">=3.9.0,<3.10" },
     { name = "qrcode", specifier = ">=8.2" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.54,<2.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.53.0,<0.54" },
@@ -1252,6 +1256,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6a/53/ed9d74092561d4b01a2ef1349d52cdbc135e526c245f366b089cfca6de49/python_dotenv-1.2.3.tar.gz", hash = "sha256:a20a594dabeaa385725aa239d5244871c143ecb356add8a20fcf23773a6c3a35", size = 58945, upload-time = "2026-08-16T16:54:54.067Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0d/17/c5c6b53ddc18f297992099b3d9ec16c855c0ccc83263a21fe4d1c625ec6c/python_dotenv-1.2.3-py3-none-any.whl", hash = "sha256:904552145e8bfed22162c09dab1c2b9b54fefa7b23ba780f4f26ca0316b0f0d9", size = 22780, upload-time = "2026-08-16T16:54:52.473Z" },
+]
+
+[[package]]
+name = "pyvalhalla"
+version = "3.9.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b0/71/29e3f23c457ad4cc9ae3d2f7b1ce0b90cbd72ba063e4c11346ca21eaf587/pyvalhalla-3.9.0.tar.gz", hash = "sha256:ee57273e850e4ba8ccea3ef2e0925967414c61bcfbab2a5f338d3ea7acbb4673", size = 36505144, upload-time = "2026-09-19T13:58:12.746Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/09/ce/c50b9f692bc4eaccbe7e0d2d2df2fb541607dedaa1b47920ed7a2c5a0326/pyvalhalla-3.9.0-cp312-abi3-macosx_14_0_arm64.whl", hash = "sha256:e4ed269fc0ffd2d3e69460ca9ba0443309845b2bfdf582d8975af88c6933cd97", size = 26358714, upload-time = "2026-09-19T13:57:55.453Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/d3/60d87a4f502d3e7e15fa2c2dd51074d518b401f47266dbe826526df58d4e/pyvalhalla-3.9.0-cp312-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:efc9a8f7098cc9d128b065a59cec386a0c6507c7eb690ef91421fbe5e57ed212", size = 34737620, upload-time = "2026-09-19T13:57:59.573Z" },
+    { url = "https://files.pythonhosted.org/packages/02/86/ba439b603fcb7e7976949b34e939069f2b93995bfbc539b7384e028e20a9/pyvalhalla-3.9.0-cp312-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:6d027f88f8e0d8055d1a4df8c45e6d78bfdaf319d4ce69f7eecd3940b77dc6b3", size = 37536056, upload-time = "2026-09-19T13:58:04.329Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/26/4f2477aa5f8a6e4d259a5183740e24e13222937815782f92e7f3d8f91982/pyvalhalla-3.9.0-cp312-abi3-win_amd64.whl", hash = "sha256:f41ef11f1fde16271786d0ff1cf978b4dea6770c6d541f55eaafd63a2d058bb3", size = 22247318, upload-time = "2026-09-19T13:58:08.515Z" },
 ]
 
 [[package]]

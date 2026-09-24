@@ -38,6 +38,7 @@ class BeaconOut(BaseModel):
     emoji: str | None
     color: str | None
     enabled: bool
+    vehicle: bool = Field(description="Lives in a vehicle: road routes treat it as a car.")
     paired_at: datetime | None
     location_count: int
     latest: LatestLocation | None
@@ -49,3 +50,4 @@ class BeaconUpdate(BaseModel):
     emoji: str | None = Field(default=None, max_length=16)
     color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     enabled: bool | None = None
+    vehicle: bool | None = None

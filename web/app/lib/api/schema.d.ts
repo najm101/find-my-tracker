@@ -459,6 +459,158 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/routing": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get Status */
+    get: operations["get_status_api_routing_get"]
+    /**
+     * Update
+     * @description Turn road routes off, use the built-in engine, or connect to a Valhalla server.
+     */
+    put: operations["update_api_routing_put"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/routing/auto-download": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    /** Auto Download */
+    put: operations["auto_download_api_routing_auto_download_put"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/routing/data": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete Map Data
+     * @description Delete every downloaded region and all road data of the built-in engine.
+     */
+    delete: operations["delete_map_data_api_routing_data_delete"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/routing/regions": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Add Region */
+    post: operations["add_region_api_routing_regions_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/routing/regions/catalog": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Catalog
+     * @description Every map region Geofabrik offers.
+     */
+    get: operations["catalog_api_routing_regions_catalog_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/routing/regions/refresh": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Refresh Regions
+     * @description Download every region again (Geofabrik updates them daily) and rebuild the road data.
+     */
+    post: operations["refresh_regions_api_routing_regions_refresh_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/routing/regions/{region_id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /** Remove Region */
+    delete: operations["remove_region_api_routing_regions__region_id__delete"]
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/routing/routes": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Routes
+     * @description History snapped to roads, trip by trip. `pending` trips are still being matched.
+     */
+    get: operations["routes_api_routing_routes_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/settings": {
     parameters: {
       query?: never
@@ -566,6 +718,11 @@ export interface components {
        */
       poll_interval_minutes: number
     }
+    /** AutoDownloadUpdate */
+    AutoDownloadUpdate: {
+      /** Enabled */
+      enabled: boolean
+    }
     /**
      * Battery
      * @enum {string}
@@ -603,6 +760,11 @@ export interface components {
       name: string
       /** Paired At */
       paired_at: string | null
+      /**
+       * Vehicle
+       * @description Lives in a vehicle: road routes treat it as a car.
+       */
+      vehicle: boolean
     }
     /** BeaconUpdate */
     BeaconUpdate: {
@@ -614,6 +776,31 @@ export interface components {
       emoji?: string | null
       /** Enabled */
       enabled?: boolean | null
+      /** Vehicle */
+      vehicle?: boolean | null
+    }
+    /** BuiltinOut */
+    BuiltinOut: {
+      /** Auto Download */
+      auto_download: boolean
+      /** Built At */
+      built_at: string | null
+      /**
+       * Detail
+       * @description What it is doing, for people.
+       */
+      detail: string | null
+      /** Disk Bytes */
+      disk_bytes: number
+      /** Error */
+      error: string | null
+      phase: components["schemas"]["Phase"]
+      /** Progress */
+      progress: number | null
+      /** Regions */
+      regions: components["schemas"]["RegionOut"][]
+      /** Serving */
+      serving: boolean
     }
     /** CandidateOut */
     CandidateOut: {
@@ -634,11 +821,28 @@ export interface components {
        */
       personal_device: boolean
     }
+    /** CatalogRegion */
+    CatalogRegion: {
+      /** Id */
+      id: string
+      /** Name */
+      name: string
+      /**
+       * Parent
+       * @description The name of the region it is part of.
+       */
+      parent: string | null
+    }
     /** CodeRequest */
     CodeRequest: {
       /** Code */
       code: string
     }
+    /**
+     * Costing
+     * @enum {string}
+     */
+    Costing: "auto" | "pedestrian"
     /** DeviceOut */
     DeviceOut: {
       /** Added At */
@@ -657,6 +861,23 @@ export interface components {
      * @enum {string}
      */
     ExportFormat: "csv" | "geojson"
+    /** ExternalOut */
+    ExternalOut: {
+      /** Error */
+      error: string | null
+      /** Reachable */
+      reachable: boolean
+      /** Url */
+      url: string
+      /** Version */
+      version: string | null
+    }
+    /**
+     * Fallback
+     * @description Why a trip has no road route; it is drawn as reported instead.
+     * @enum {string}
+     */
+    Fallback: "no_roads" | "error"
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -808,6 +1029,11 @@ export interface components {
       password: string
     }
     /**
+     * Phase
+     * @enum {string}
+     */
+    Phase: "idle" | "downloading" | "building" | "starting"
+    /**
      * PollOutcome
      * @enum {string}
      */
@@ -846,6 +1072,132 @@ export interface components {
        * @description Shown once. They cannot be retrieved again.
        */
       codes: string[]
+    }
+    /** RegionAdd */
+    RegionAdd: {
+      /** Id */
+      id: string
+    }
+    /** RegionOut */
+    RegionOut: {
+      /**
+       * Auto
+       * @description Added automatically, because history was there.
+       */
+      auto: boolean
+      /** Error */
+      error: string | null
+      /** Id */
+      id: string
+      /**
+       * In Use
+       * @description Part of the road data being served.
+       */
+      in_use: boolean
+      /** Name */
+      name: string
+      /**
+       * Progress
+       * @description 0..1 while downloading.
+       */
+      progress: number | null
+      /** Size Bytes */
+      size_bytes: number | null
+      status: components["schemas"]["RegionStatus"]
+    }
+    /**
+     * RegionStatus
+     * @enum {string}
+     */
+    RegionStatus:
+      "queued" | "downloading" | "downloaded" | "failed" | "too_large"
+    /**
+     * RegionSuggestion
+     * @description A map region history needs but the built-in engine does not have.
+     */
+    RegionSuggestion: {
+      /** Beacons */
+      beacons: string[]
+      /** Id */
+      id: string
+      /** Name */
+      name: string
+    }
+    /** RoutedReport */
+    RoutedReport: {
+      /** Latitude */
+      latitude: number
+      /** Longitude */
+      longitude: number
+      /**
+       * Observed At
+       * Format: date-time
+       */
+      observed_at: string
+      /**
+       * Off Route
+       * @description Not on the likely route: probably a finder on a nearby road. Its position here is where the route was at that time.
+       */
+      off_route: boolean
+      /**
+       * Offset M
+       * @description Metres along the trip's route.
+       */
+      offset_m: number
+    }
+    /** RoutesResponse */
+    RoutesResponse: {
+      /** Message */
+      message: string | null
+      /**
+       * Pending
+       * @description Trips still being matched; ask again shortly.
+       */
+      pending: number
+      state: components["schemas"]["RoutesState"]
+      /** Trips */
+      trips: components["schemas"]["TripRoute"][]
+    }
+    /**
+     * RoutesState
+     * @enum {string}
+     */
+    RoutesState: "ok" | "off" | "unavailable"
+    /**
+     * RoutingMode
+     * @enum {string}
+     */
+    RoutingMode: "off" | "builtin" | "external"
+    /** RoutingStatus */
+    RoutingStatus: {
+      builtin: components["schemas"]["BuiltinOut"] | null
+      /** Catalog Available */
+      catalog_available: boolean
+      /**
+       * Configured By Env
+       * @description ROUTING_URL is set: the server's operator chose it, Settings cannot change it.
+       */
+      configured_by_env: boolean
+      external: components["schemas"]["ExternalOut"] | null
+      /**
+       * Message
+       * @description What is missing, when not ready. For people.
+       */
+      message: string | null
+      /** Missing Regions */
+      missing_regions: components["schemas"]["RegionSuggestion"][]
+      mode: components["schemas"]["RoutingMode"]
+      /**
+       * Ready
+       * @description Road routes can be shown right now.
+       */
+      ready: boolean
+    }
+    /** RoutingUpdate */
+    RoutingUpdate: {
+      mode: components["schemas"]["RoutingMode"]
+      /** Url */
+      url?: string | null
     }
     /** SecurityStatus */
     SecurityStatus: {
@@ -924,6 +1276,26 @@ export interface components {
       refresh_available_at: string | null
       /** Running */
       running: boolean
+    }
+    /** TripRoute */
+    TripRoute: {
+      /** Beacon Id */
+      beacon_id: number
+      /**
+       * Broken After
+       * @description Indices into `reports`: the way from that report to the next is not known.
+       */
+      broken_after: number[]
+      costing: components["schemas"]["Costing"]
+      /** @description Why there is no road route; draw the trip as reported instead. */
+      fallback: components["schemas"]["Fallback"] | null
+      /**
+       * Geometry
+       * @description [longitude, latitude] pairs.
+       */
+      geometry: [number, number][]
+      /** Reports */
+      reports: components["schemas"]["RoutedReport"][]
     }
     /** UnlockRequest */
     UnlockRequest: {
@@ -1790,6 +2162,250 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["VisitsResponse"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  get_status_api_routing_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RoutingStatus"]
+        }
+      }
+    }
+  }
+  update_api_routing_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RoutingUpdate"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RoutingStatus"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  auto_download_api_routing_auto_download_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AutoDownloadUpdate"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RoutingStatus"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  delete_map_data_api_routing_data_delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RoutingStatus"]
+        }
+      }
+    }
+  }
+  add_region_api_routing_regions_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RegionAdd"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RoutingStatus"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  catalog_api_routing_regions_catalog_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CatalogRegion"][]
+        }
+      }
+    }
+  }
+  refresh_regions_api_routing_regions_refresh_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RoutingStatus"]
+        }
+      }
+    }
+  }
+  remove_region_api_routing_regions__region_id__delete: {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        region_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RoutingStatus"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  routes_api_routing_routes_get: {
+    parameters: {
+      query?: {
+        /** @description Omit for all beacons. */
+        beacon_id?: number[] | null
+        from?: string | null
+        to?: string | null
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RoutesResponse"]
         }
       }
       /** @description Validation Error */

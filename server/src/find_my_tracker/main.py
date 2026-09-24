@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
@@ -26,11 +26,22 @@ from find_my_tracker.features.auth.service import AdminAuth, AuthService, LoginR
 from find_my_tracker.features.beacons.router import router as beacons_router
 from find_my_tracker.features.health.router import router as health_router
 from find_my_tracker.features.locations.router import router as locations_router
+from find_my_tracker.features.routing.router import router as routing_router
+from find_my_tracker.features.routing.runtime import RoutingRuntime
+from find_my_tracker.features.routing.schemas import RoutingMode
+from find_my_tracker.features.routing.service import RoutingService
 from find_my_tracker.features.settings.router import router as settings_router
 from find_my_tracker.features.tracking.poller import STARTUP_DELAY_SECONDS, Poller
 from find_my_tracker.features.tracking.router import router as tracking_router
 from find_my_tracker.features.tracking.service import PollService
 from find_my_tracker.integrations.apple.types import AppleClientFactory
+from find_my_tracker.integrations.valhalla.builtin import (
+    BuiltinEngine,
+    Toolchain,
+    ValhallaToolchain,
+)
+from find_my_tracker.integrations.valhalla.regions import RegionCatalog
+from find_my_tracker.integrations.valhalla.types import Valhalla
 
 
 def _default_apple_factory(settings: Settings) -> AppleClientFactory:
@@ -51,6 +62,9 @@ def build_container(
     apple: AppleClientFactory | None = None,
     clock: Clock | None = None,
     poller_startup_delay: float | None = None,
+    routing_tools: Toolchain | None = None,
+    routing_catalog: RegionCatalog | None = None,
+    routing_connect: Callable[[str], Valhalla] | None = None,
 ) -> Container:
     clock = clock or Clock()
     secret = settings.secret_key.get_secret_value()
@@ -58,7 +72,16 @@ def build_container(
     secrets = SecretBox(secret)
     apple = apple or _default_apple_factory(settings)
     poll_service = PollService(db, apple, secrets, clock)
-    return Container(
+    tools = routing_tools or ValhallaToolchain(
+        port=settings.routing_builtin_port, threads=settings.routing_build_threads
+    )
+    routing = RoutingRuntime(
+        env_url=settings.routing_url,
+        builtin=BuiltinEngine(settings.routing_dir, tools),
+        catalog=routing_catalog or RegionCatalog(settings.routing_dir / "geofabrik-index.json"),
+        **({"connect": routing_connect} if routing_connect else {}),
+    )
+    container = Container(
         settings=settings,
         clock=clock,
         db=db,
@@ -76,7 +99,15 @@ def build_container(
                 STARTUP_DELAY_SECONDS if poller_startup_delay is None else poller_startup_delay
             ),
         ),
+        routing=routing,
     )
+
+    async def after_poll() -> None:
+        async with db.session() as session:
+            await RoutingService(session, container).ensure_coverage()
+
+    container.poller.after_poll = after_poll
+    return container
 
 
 def create_app(settings: Settings | None = None, container: Container | None = None) -> FastAPI:
@@ -93,11 +124,16 @@ def create_app(settings: Settings | None = None, container: Container | None = N
                 reset=settings.admin_password_reset,
             )
         await container.device_identity.load()
+        async with container.db.session() as session:
+            routing = RoutingService(session, container)
+            if (await routing.config()).mode is RoutingMode.BUILTIN:
+                await container.routing.use_builtin(True)
         container.poller.start()
         try:
             yield
         finally:
             await container.poller.stop()
+            await container.routing.close()
             await container.wizards.discard()
             await container.db.dispose()
 
@@ -122,6 +158,7 @@ def create_app(settings: Settings | None = None, container: Container | None = N
         locations_router,
         tracking_router,
         settings_router,
+        routing_router,
     ):
         api.include_router(router)
     app.include_router(api)

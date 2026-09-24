@@ -1,10 +1,13 @@
 name: CI
 
-# Checks for pull requests. Pushes to main and version tags run these same checks
-# through release.yml (workflow_call) before publishing an image.
+# Checks for pull requests and pushes to dev. Pushes to main run these same checks through
+# release.yml (workflow_call) before publishing an image.
 on:
   pull_request:
   workflow_call:
+  # dev is the working branch: check it before it is merged into main and released.
+  push:
+    branches: [dev]
 
 permissions:
   contents: read
@@ -102,3 +105,5 @@ jobs:
           curl -sf localhost:8080/api/health
           curl -sf localhost:8080/ | grep -q "<html"
           docker logs fmt
+      - name: Built-in routing engine works in the image
+        run: docker exec -i fmt python - < .github/scripts/routing-smoke.py

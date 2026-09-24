@@ -8,11 +8,13 @@
  */
 
 import type { Schemas } from "~/lib/api/client"
+import { type LngLat, measure, pointAlong, slice, upTo } from "~/lib/geometry"
+import type { RoadTrip } from "~/lib/road-routes"
 
 type Point = Schemas["LocationPoint"]
 type Stay = Schemas["Stay"]
 
-export type LngLat = [number, number]
+export type { LngLat }
 
 /** Longer than this between two reports, and the line says nothing about how it was travelled. */
 export const GAP_MS = 30 * 60_000
@@ -39,10 +41,23 @@ export type Track = {
   coords: LngLat[]
   /** Per segment (report i to i + 1): spent inside one stay. */
   still: boolean[]
+  /**
+   * Per segment: the way along the roads from report i to i + 1, when a road route says so;
+   * null for a straight line.
+   */
+  legs: (LngLat[] | null)[]
 }
 
-/** One track per beacon, from the good reports only (noisy ones are skipped). */
-export function buildTracks(points: Point[], stays: Stay[]): Track[] {
+/**
+ * One track per beacon, from the good reports only (noisy ones are skipped). With road `routes`,
+ * the marker goes along them: each routed report sits on its route, and moves along the roads to
+ * the next one.
+ */
+export function buildTracks(
+  points: Point[],
+  stays: Stay[],
+  routes: RoadTrip[] = []
+): Track[] {
   const byBeacon = new Map<number, Point[]>()
   for (const p of points) {
     if (p.noise) continue
@@ -91,9 +106,38 @@ export function buildTracks(points: Point[], stays: Stay[]): Track[] {
       still: stayOf
         .slice(0, -1)
         .map((stay, i) => stay >= 0 && stay === stayOf[i + 1]),
+      legs: reports.slice(0, -1).map(() => null),
     })
   }
+  for (const route of routes) {
+    const track = tracks.find((t) => t.beaconId === route.beacon_id)
+    if (track) followRoute(track, route)
+  }
   return tracks
+}
+
+/** Put the track's reports on a trip's route, and the legs between them along it. */
+function followRoute(track: Track, route: RoadTrip) {
+  if (route.fallback || route.geometry.length < 2) return
+  const line = route.geometry as LngLat[]
+  const along = measure(line)
+  const index = new Map(track.times.map((t, i) => [t, i]))
+  const at = route.reports.map((r) => index.get(Date.parse(r.observed_at)))
+  const broken = new Set(route.broken_after)
+  route.reports.forEach((r, k) => {
+    const i = at[k]
+    if (i !== undefined) track.coords[i] = [r.longitude, r.latitude]
+  })
+  for (let k = 0; k + 1 < route.reports.length; k++) {
+    const i = at[k]
+    if (i === undefined || at[k + 1] !== i + 1 || broken.has(k)) continue
+    track.legs[i] = slice(
+      line,
+      along,
+      route.reports[k].offset_m,
+      route.reports[k + 1].offset_m
+    )
+  }
 }
 
 export type QuietKind = "stay" | "gap" | "idle"
@@ -304,6 +348,8 @@ export function positionAt(track: Track, at: number): LngLat | null {
   if (i < 0) return null
   if (i >= track.times.length - 1) return track.coords[track.coords.length - 1]
   const f = (at - track.times[i]) / (track.times[i + 1] - track.times[i])
+  const road = track.legs[i]
+  if (road) return pointAlong(road, measure(road), f)
   const [x1, y1] = track.coords[i]
   const [x2, y2] = track.coords[i + 1]
   return [x1 + (x2 - x1) * f, y1 + (y2 - y1) * f]
@@ -312,7 +358,7 @@ export function positionAt(track: Track, at: number): LngLat | null {
 /** Lines travelled: runs of movement, and the straight jumps across gaps in the reports. */
 export type Lines = { moving: LngLat[][]; gaps: LngLat[][] }
 
-/** The path from the first report up to report `index`. */
+/** The path from the first report up to report `index`, along the roads where known. */
 export function travelled(track: Track, index: number): Lines {
   const moving: LngLat[][] = []
   const gaps: LngLat[][] = []
@@ -329,7 +375,9 @@ export function travelled(track: Track, index: number): Lines {
       run = [a]
       moving.push(run)
     }
-    run.push(b)
+    const road = track.legs[i]
+    if (road) run.push(...road.slice(1))
+    else run.push(b)
   }
   return { moving, gaps }
 }
@@ -338,12 +386,16 @@ export function travelled(track: Track, index: number): Lines {
 export function leg(
   track: Track,
   at: number
-): { line: [LngLat, LngLat]; gap: boolean } | null {
+): { line: LngLat[]; gap: boolean } | null {
   const i = reportIndexAt(track, at)
   const head = positionAt(track, at)
   if (i < 0 || i >= track.times.length - 1 || !head) return null
+  const road = track.legs[i]
+  const f = (at - track.times[i]) / (track.times[i + 1] - track.times[i])
   return {
-    line: [track.coords[i], head],
+    line: road
+      ? [...upTo(road, measure(road), f), head]
+      : [track.coords[i], head],
     gap: track.times[i + 1] - track.times[i] > GAP_MS,
   }
 }

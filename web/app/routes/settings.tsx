@@ -9,6 +9,8 @@ import { PasswordCard } from "~/features/auth/components/password-card"
 import { SignInActivity } from "~/features/auth/components/sign-in-activity"
 import { TwoFactorCard } from "~/features/auth/components/two-factor-card"
 import { BeaconSettings } from "~/features/beacons/components/beacon-settings"
+import { getRouting } from "~/features/routing/api/routing"
+import { RoadRoutesCard } from "~/features/routing/components/road-routes-card"
 import { getSettings } from "~/features/settings/api/settings"
 import { PollingCard } from "~/features/settings/components/polling-card"
 
@@ -20,12 +22,16 @@ export function meta() {
 }
 
 export async function clientLoader() {
-  const [settings, security] = await Promise.all([getSettings(), getSecurity()])
-  return { settings, security }
+  const [settings, security, routing] = await Promise.all([
+    getSettings(),
+    getSecurity(),
+    getRouting(),
+  ])
+  return { settings, security, routing }
 }
 
 export default function Settings({ loaderData }: Route.ComponentProps) {
-  const { settings, security } = loaderData
+  const { settings, security, routing } = loaderData
   const { account, beacons, status, loadedAt } = useLayoutData()
   const navigate = useNavigate()
 
@@ -55,6 +61,7 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
       </header>
       <PollingCard settings={settings} status={status} now={loadedAt} />
       <BeaconSettings beacons={beacons} />
+      <RoadRoutesCard routing={routing} now={loadedAt} />
       <AccountCard account={account} />
 
       <section className="flex flex-col gap-6">

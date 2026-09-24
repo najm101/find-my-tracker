@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import datetime
 
 from find_my_tracker.core.clock import Clock, to_datetime
@@ -47,6 +48,8 @@ class Poller:
         self._task: asyncio.Task[None] | None = None
         self.running = False
         self.next_run_at: datetime | None = None
+        #: Runs after each poll that fetched something (e.g. fetching map data for new places).
+        self.after_poll: Callable[[], Awaitable[None]] | None = None
 
     @property
     def service(self) -> PollService:
@@ -122,6 +125,11 @@ class Poller:
             self.running = False
         if run is None:  # nothing to poll yet; don't spin
             self._not_before = self._clock.timestamp() + IDLE_RECHECK_SECONDS
+        elif self.after_poll:
+            try:
+                await self.after_poll()
+            except Exception:  # its trouble is not the poll's
+                logger.exception("After-poll hook failed")
 
     async def _seconds_until_due(self) -> float:
         async with self._db.session() as session:

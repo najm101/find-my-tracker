@@ -28,10 +28,18 @@ import {
   type MapFocus,
   TrackerLayers,
 } from "~/features/map/components/tracker-layers"
+import { getRoutes } from "~/features/routing/api/routing"
+import { RouteModeToggle } from "~/features/routing/components/route-mode-toggle"
+import { RoutesNotice } from "~/features/routing/components/routes-notice"
 import type { Schemas } from "~/lib/api/client"
 import { BEACON_KINDS } from "~/lib/beacon-kind"
 import { buildClock, buildTracks, reportIndexAt } from "~/lib/playback"
-import { getShowNoise, withShowNoise } from "~/lib/search-params"
+import {
+  getRouteMode,
+  getShowNoise,
+  withRouteMode,
+  withShowNoise,
+} from "~/lib/search-params"
 import { rangeFromParams, rangeKey, withRange } from "~/lib/time-range"
 
 import type { Route } from "./+types/beacon"
@@ -45,25 +53,32 @@ export async function clientLoader({
   request,
   params,
 }: Route.ClientLoaderArgs) {
-  const range = rangeFromParams(new URL(request.url).searchParams)
+  const search = new URL(request.url).searchParams
+  const range = rangeFromParams(search)
   const beaconId = Number(params.beaconId)
-  const history = await getLocations({
-    from: range.from,
-    to: range.to,
-    beaconIds: [beaconId],
-  })
-  return { beaconId, range, history }
+  const filters = { from: range.from, to: range.to, beaconIds: [beaconId] }
+  const [history, routes] = await Promise.all([
+    getLocations(filters),
+    getRouteMode(search) === "reported" ? null : getRoutes(filters),
+  ])
+  return { beaconId, range, history, routes }
 }
 
 export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
-  const { beaconId, range, history } = loaderData
+  const { beaconId, range, history, routes } = loaderData
   const { beacons, loadedAt } = useLayoutData()
   const [params, setParams] = useSearchParams()
   const [focus, setFocus] = useState<MapFocus | null>(null)
   const showNoise = getShowNoise(params)
   const beacon = beacons.find((b) => b.id === beaconId)
-  // Playback always uses the good reports, and the stays found among them.
-  const tracks = buildTracks(history.points, history.stays)
+  const routeMode = getRouteMode(params)
+  const roads =
+    routeMode !== "reported" && routes?.state === "ok"
+      ? routes.trips
+      : undefined
+  // Playback always uses the good reports, and the stays found among them; it follows the
+  // roads whenever they are on the map.
+  const tracks = buildTracks(history.points, history.stays, roads)
   const clock = buildClock(tracks)
   const player = usePlayback(clock, `${beaconId}|${rangeKey(range)}`)
 
@@ -95,6 +110,9 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
   const stays = showNoise ? [] : history.stays
   const stayIndex = indexStays(stays)
   const rowKey = (p: Schemas["LocationPoint"]) => rowKeyFor(stayIndex, p)
+  const offRoute = roads
+    ? roads.reduce((n, t) => n + t.reports.filter((r) => r.off_route).length, 0)
+    : 0
   // While playing, the timeline follows along: the last report passed is its selected row.
   const track = tracks[0]
   const passed = track?.points[reportIndexAt(track, player.at)]
@@ -113,6 +131,8 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
         selectedId={beacon.id}
         focus={player.open ? null : focus}
         backdrop={player.open}
+        pathMode={routeMode}
+        roads={roads}
         onPick={(p) =>
           player.open
             ? player.seek(Date.parse(p.observed_at))
@@ -198,6 +218,10 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
                 <PlayIcon />
                 Play
               </Button>
+              <RouteModeToggle
+                mode={routeMode}
+                onMode={(m) => setParams(withRouteMode(params, m))}
+              />
               <ExportMenu filters={filters} />
               <NoiseToggle
                 pressed={showNoise}
@@ -212,7 +236,12 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
                 !showNoise &&
                 `, ${noisyCount.toLocaleString()} unlikely hidden`}
               {history.truncated && " (limit reached, narrow the range)"}
+              {offRoute > 0 &&
+                `. ${offRoute.toLocaleString()} off the likely route (hollow dots)`}
             </p>
+            {routeMode !== "reported" && routes && (
+              <RoutesNotice routes={routes} />
+            )}
             <DayTimeline
               points={points}
               stays={stays}

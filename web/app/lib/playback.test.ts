@@ -263,3 +263,62 @@ describe("the marker", () => {
     expect(leg(track, T0 + 999 * MIN)).toBeNull()
   })
 })
+
+describe("along a road route", () => {
+  // Two reports, and a route between them that goes round a corner (east, then north).
+  const reports = [report(0, 0), report(10, 0.01)]
+  const route: Schemas["TripRoute"] = {
+    beacon_id: 1,
+    costing: "auto",
+    geometry: [
+      [0, 52],
+      [0.01, 52],
+      [0.01, 52.006],
+    ],
+    reports: [
+      {
+        observed_at: at(0),
+        latitude: 52,
+        longitude: 0,
+        offset_m: 0,
+        off_route: false,
+      },
+      {
+        observed_at: at(10),
+        latitude: 52.006,
+        longitude: 0.01,
+        offset_m: 1352,
+        off_route: false,
+      },
+    ],
+    broken_after: [],
+    fallback: null,
+  }
+  const [track] = buildTracks(reports, [], [route])
+
+  it("puts reports on the route and the way between them along it", () => {
+    expect(track.coords[1]).toEqual([0.01, 52.006])
+    expect(track.legs[0]?.length).toBe(3)
+  })
+
+  it("moves the marker along the roads, round the corner", () => {
+    const [lon, lat] = positionAt(track, T0 + 7.5 * MIN)!
+    expect(lon).toBeCloseTo(0.01, 3) // past the corner: heading north now
+    expect(lat).toBeGreaterThan(52.002)
+  })
+
+  it("draws the way travelled along the roads", () => {
+    expect(travelled(track, 1).moving[0]).toHaveLength(3)
+    expect(leg(track, T0 + 7.5 * MIN)?.line.length).toBe(3) // start, corner, marker
+  })
+
+  it("ignores a route that fell back to the reports", () => {
+    const [plain] = buildTracks(
+      reports,
+      [],
+      [{ ...route, fallback: "no_roads" }]
+    )
+    expect(plain.legs).toEqual([null])
+    expect(plain.coords[1]).toEqual([0.01, 52])
+  })
+})

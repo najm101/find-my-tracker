@@ -43,8 +43,9 @@ class BeaconService:
     async def update(self, beacon_id: int, patch: BeaconUpdate) -> BeaconOut:
         beacon = await self._get(beacon_id)
         changes = patch.model_dump(exclude_unset=True)
-        if "enabled" in changes:
-            beacon.enabled = bool(changes.pop("enabled"))
+        for flag in ("enabled", "vehicle"):
+            if flag in changes:
+                setattr(beacon, flag, bool(changes.pop(flag)))
         for field, value in changes.items():  # empty string clears an override
             setattr(beacon, field, value or None)
         beacon.updated_at = self._clock.timestamp()
@@ -99,6 +100,9 @@ class BeaconService:
     async def names(self) -> dict[int, str]:
         return {b.id: b.display_name or b.name for b in await self._repo.list()}
 
+    async def vehicle_ids(self) -> set[int]:
+        return {b.id for b in await self._repo.list() if b.vehicle}
+
     async def tracked_identifiers(self) -> set[str]:
         return set(await self._repo.by_identifier())
 
@@ -130,6 +134,7 @@ class BeaconService:
             emoji=beacon.emoji,
             color=beacon.color,
             enabled=beacon.enabled,
+            vehicle=beacon.vehicle,
             paired_at=to_datetime(beacon.paired_at),
             location_count=count,
             latest=LatestLocation(

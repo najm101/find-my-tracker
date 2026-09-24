@@ -86,3 +86,10 @@ export function distance(meters: number): string {
   const km = meters / 1000
   return km < 10 ? `${km.toFixed(1)} km` : `${Math.round(km)} km`
 }
+
+/** "740 KB", "178 MB", "1.5 GB". */
+export function bytes(n: number): string {
+  if (n < 1_000_000) return `${Math.max(1, Math.round(n / 1000))} KB`
+  if (n < 1_000_000_000) return `${Math.round(n / 1_000_000)} MB`
+  return `${(n / 1_000_000_000).toFixed(1)} GB`
+}

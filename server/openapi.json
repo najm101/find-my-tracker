@@ -94,6 +94,19 @@
         "title": "AppSettings",
         "type": "object"
       },
+      "AutoDownloadUpdate": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "AutoDownloadUpdate",
+        "type": "object"
+      },
       "Battery": {
         "enum": [
           "full",
@@ -207,6 +220,11 @@
               }
             ],
             "title": "Paired At"
+          },
+          "vehicle": {
+            "description": "Lives in a vehicle: road routes treat it as a car.",
+            "title": "Vehicle",
+            "type": "boolean"
           }
         },
         "required": [
@@ -218,6 +236,7 @@
           "emoji",
           "color",
           "enabled",
+          "vehicle",
           "paired_at",
           "location_count",
           "latest",
@@ -274,9 +293,105 @@
               }
             ],
             "title": "Enabled"
+          },
+          "vehicle": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vehicle"
           }
         },
         "title": "BeaconUpdate",
+        "type": "object"
+      },
+      "BuiltinOut": {
+        "properties": {
+          "auto_download": {
+            "title": "Auto Download",
+            "type": "boolean"
+          },
+          "built_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Built At"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it is doing, for people.",
+            "title": "Detail"
+          },
+          "disk_bytes": {
+            "title": "Disk Bytes",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/Phase"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/RegionOut"
+            },
+            "title": "Regions",
+            "type": "array"
+          },
+          "serving": {
+            "title": "Serving",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "phase",
+          "detail",
+          "progress",
+          "serving",
+          "built_at",
+          "regions",
+          "disk_bytes",
+          "error",
+          "auto_download"
+        ],
+        "title": "BuiltinOut",
         "type": "object"
       },
       "CandidateOut": {
@@ -337,6 +452,37 @@
         "title": "CandidateOut",
         "type": "object"
       },
+      "CatalogRegion": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of the region it is part of.",
+            "title": "Parent"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "parent"
+        ],
+        "title": "CatalogRegion",
+        "type": "object"
+      },
       "CodeRequest": {
         "properties": {
           "code": {
@@ -351,6 +497,14 @@
         ],
         "title": "CodeRequest",
         "type": "object"
+      },
+      "Costing": {
+        "enum": [
+          "auto",
+          "pedestrian"
+        ],
+        "title": "Costing",
+        "type": "string"
       },
       "DeviceOut": {
         "properties": {
@@ -413,6 +567,57 @@
           "geojson"
         ],
         "title": "ExportFormat",
+        "type": "string"
+      },
+      "ExternalOut": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "reachable": {
+            "title": "Reachable",
+            "type": "boolean"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "url",
+          "reachable",
+          "version",
+          "error"
+        ],
+        "title": "ExternalOut",
+        "type": "object"
+      },
+      "Fallback": {
+        "description": "Why a trip has no road route; it is drawn as reported instead.",
+        "enum": [
+          "no_roads",
+          "error"
+        ],
+        "title": "Fallback",
         "type": "string"
       },
       "HTTPValidationError": {
@@ -776,6 +981,16 @@
         "title": "PasswordConfirm",
         "type": "object"
       },
+      "Phase": {
+        "enum": [
+          "idle",
+          "downloading",
+          "building",
+          "starting"
+        ],
+        "title": "Phase",
+        "type": "string"
+      },
       "PollOutcome": {
         "enum": [
           "ok",
@@ -883,6 +1098,317 @@
           "codes"
         ],
         "title": "RecoveryCodes",
+        "type": "object"
+      },
+      "RegionAdd": {
+        "properties": {
+          "id": {
+            "maxLength": 100,
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "RegionAdd",
+        "type": "object"
+      },
+      "RegionOut": {
+        "properties": {
+          "auto": {
+            "description": "Added automatically, because history was there.",
+            "title": "Auto",
+            "type": "boolean"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "in_use": {
+            "description": "Part of the road data being served.",
+            "title": "In Use",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "0..1 while downloading.",
+            "title": "Progress"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RegionStatus"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "auto",
+          "size_bytes",
+          "error",
+          "in_use",
+          "progress"
+        ],
+        "title": "RegionOut",
+        "type": "object"
+      },
+      "RegionStatus": {
+        "enum": [
+          "queued",
+          "downloading",
+          "downloaded",
+          "failed",
+          "too_large"
+        ],
+        "title": "RegionStatus",
+        "type": "string"
+      },
+      "RegionSuggestion": {
+        "description": "A map region history needs but the built-in engine does not have.",
+        "properties": {
+          "beacons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Beacons",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "beacons"
+        ],
+        "title": "RegionSuggestion",
+        "type": "object"
+      },
+      "RoutedReport": {
+        "properties": {
+          "latitude": {
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "title": "Longitude",
+            "type": "number"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "off_route": {
+            "description": "Not on the likely route: probably a finder on a nearby road. Its position here is where the route was at that time.",
+            "title": "Off Route",
+            "type": "boolean"
+          },
+          "offset_m": {
+            "description": "Metres along the trip's route.",
+            "title": "Offset M",
+            "type": "number"
+          }
+        },
+        "required": [
+          "observed_at",
+          "latitude",
+          "longitude",
+          "offset_m",
+          "off_route"
+        ],
+        "title": "RoutedReport",
+        "type": "object"
+      },
+      "RoutesResponse": {
+        "properties": {
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "pending": {
+            "description": "Trips still being matched; ask again shortly.",
+            "title": "Pending",
+            "type": "integer"
+          },
+          "state": {
+            "$ref": "#/components/schemas/RoutesState"
+          },
+          "trips": {
+            "items": {
+              "$ref": "#/components/schemas/TripRoute"
+            },
+            "title": "Trips",
+            "type": "array"
+          }
+        },
+        "required": [
+          "state",
+          "message",
+          "trips",
+          "pending"
+        ],
+        "title": "RoutesResponse",
+        "type": "object"
+      },
+      "RoutesState": {
+        "enum": [
+          "ok",
+          "off",
+          "unavailable"
+        ],
+        "title": "RoutesState",
+        "type": "string"
+      },
+      "RoutingMode": {
+        "enum": [
+          "off",
+          "builtin",
+          "external"
+        ],
+        "title": "RoutingMode",
+        "type": "string"
+      },
+      "RoutingStatus": {
+        "properties": {
+          "builtin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BuiltinOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "catalog_available": {
+            "title": "Catalog Available",
+            "type": "boolean"
+          },
+          "configured_by_env": {
+            "description": "ROUTING_URL is set: the server's operator chose it, Settings cannot change it.",
+            "title": "Configured By Env",
+            "type": "boolean"
+          },
+          "external": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExternalOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What is missing, when not ready. For people.",
+            "title": "Message"
+          },
+          "missing_regions": {
+            "items": {
+              "$ref": "#/components/schemas/RegionSuggestion"
+            },
+            "title": "Missing Regions",
+            "type": "array"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/RoutingMode"
+          },
+          "ready": {
+            "description": "Road routes can be shown right now.",
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mode",
+          "configured_by_env",
+          "ready",
+          "message",
+          "builtin",
+          "external",
+          "missing_regions",
+          "catalog_available"
+        ],
+        "title": "RoutingStatus",
+        "type": "object"
+      },
+      "RoutingUpdate": {
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/RoutingMode"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "title": "RoutingUpdate",
         "type": "object"
       },
       "SecurityStatus": {
@@ -1080,6 +1606,71 @@
           "refresh_available_at"
         ],
         "title": "TrackingStatus",
+        "type": "object"
+      },
+      "TripRoute": {
+        "properties": {
+          "beacon_id": {
+            "title": "Beacon Id",
+            "type": "integer"
+          },
+          "broken_after": {
+            "description": "Indices into `reports`: the way from that report to the next is not known.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Broken After",
+            "type": "array"
+          },
+          "costing": {
+            "$ref": "#/components/schemas/Costing"
+          },
+          "fallback": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Fallback"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why there is no road route; draw the trip as reported instead."
+          },
+          "geometry": {
+            "description": "[longitude, latitude] pairs.",
+            "items": {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            "title": "Geometry",
+            "type": "array"
+          },
+          "reports": {
+            "items": {
+              "$ref": "#/components/schemas/RoutedReport"
+            },
+            "title": "Reports",
+            "type": "array"
+          }
+        },
+        "required": [
+          "beacon_id",
+          "costing",
+          "geometry",
+          "reports",
+          "broken_after",
+          "fallback"
+        ],
+        "title": "TripRoute",
         "type": "object"
       },
       "UnlockRequest": {
@@ -2437,6 +3028,350 @@
         "summary": "Visits",
         "tags": [
           "locations"
+        ]
+      }
+    },
+    "/api/routing": {
+      "get": {
+        "operationId": "get_status_api_routing_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Status",
+        "tags": [
+          "routing"
+        ]
+      },
+      "put": {
+        "description": "Turn road routes off, use the built-in engine, or connect to a Valhalla server.",
+        "operationId": "update_api_routing_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoutingUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update",
+        "tags": [
+          "routing"
+        ]
+      }
+    },
+    "/api/routing/auto-download": {
+      "put": {
+        "operationId": "auto_download_api_routing_auto_download_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutoDownloadUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Auto Download",
+        "tags": [
+          "routing"
+        ]
+      }
+    },
+    "/api/routing/data": {
+      "delete": {
+        "description": "Delete every downloaded region and all road data of the built-in engine.",
+        "operationId": "delete_map_data_api_routing_data_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Delete Map Data",
+        "tags": [
+          "routing"
+        ]
+      }
+    },
+    "/api/routing/regions": {
+      "post": {
+        "operationId": "add_region_api_routing_regions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegionAdd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Region",
+        "tags": [
+          "routing"
+        ]
+      }
+    },
+    "/api/routing/regions/catalog": {
+      "get": {
+        "description": "Every map region Geofabrik offers.",
+        "operationId": "catalog_api_routing_regions_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogRegion"
+                  },
+                  "title": "Response Catalog Api Routing Regions Catalog Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Catalog",
+        "tags": [
+          "routing"
+        ]
+      }
+    },
+    "/api/routing/regions/refresh": {
+      "post": {
+        "description": "Download every region again (Geofabrik updates them daily) and rebuild the road data.",
+        "operationId": "refresh_regions_api_routing_regions_refresh_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Refresh Regions",
+        "tags": [
+          "routing"
+        ]
+      }
+    },
+    "/api/routing/regions/{region_id}": {
+      "delete": {
+        "operationId": "remove_region_api_routing_regions__region_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "region_id",
+            "required": true,
+            "schema": {
+              "title": "Region Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Region",
+        "tags": [
+          "routing"
+        ]
+      }
+    },
+    "/api/routing/routes": {
+      "get": {
+        "description": "History snapped to roads, trip by trip. `pending` trips are still being matched.",
+        "operationId": "routes_api_routing_routes_get",
+        "parameters": [
+          {
+            "description": "Omit for all beacons.",
+            "in": "query",
+            "name": "beacon_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Omit for all beacons.",
+              "title": "Beacon Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Routes",
+        "tags": [
+          "routing"
         ]
       }
     },

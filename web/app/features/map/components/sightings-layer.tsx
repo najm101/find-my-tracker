@@ -3,23 +3,28 @@ import { useEffect, useId, useMemo, useRef } from "react"
 
 import { useMap } from "~/components/ui/map"
 import type { Schemas } from "~/lib/api/client"
+import { reportKey } from "~/lib/road-routes"
 
 type Point = Schemas["LocationPoint"]
 
 /**
- * Every sighting as a small dot, coloured per beacon; noisy ones faint. A single circle layer,
- * because thousands of DOM markers would be far too slow. Dots are clickable when `onPick` is set.
+ * Every sighting as a small dot, coloured per beacon; noisy ones faint, and ones a road route left
+ * off the route hollow. A single circle layer, because thousands of DOM markers would be far too
+ * slow. Dots are clickable when `onPick` is set.
  */
 export function SightingsLayer({
   points,
   colors,
   faded = false,
+  offRoute,
   onPick,
 }: {
   points: Point[]
   colors: Map<number, string>
   /** Draw every dot faint, as the backdrop to a playback. */
   faded?: boolean
+  /** `reportKey`s of reports off the likely route. */
+  offRoute?: Set<string>
   onPick?: (point: Point) => void
 }) {
   const { map, isLoaded } = useMap()
@@ -37,10 +42,11 @@ export function SightingsLayer({
           index: i,
           color: colors.get(p.beacon_id) ?? "#2563eb",
           faint: faded || p.noise != null,
+          off: offRoute?.has(reportKey(p.beacon_id, p.observed_at)) ?? false,
         },
       })),
     }),
-    [points, colors, faded]
+    [points, colors, faded, offRoute]
   )
 
   useEffect(() => {
@@ -52,10 +58,23 @@ export function SightingsLayer({
       source: sourceId,
       paint: {
         "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2.5, 16, 6],
-        "circle-color": ["get", "color"],
+        // Off the route: hollow, a ring in the item's colour.
+        "circle-color": ["case", ["get", "off"], "#ffffff", ["get", "color"]],
         "circle-opacity": ["case", ["get", "faint"], 0.3, 0.85],
-        "circle-stroke-width": ["case", ["get", "faint"], 0, 1],
-        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": [
+          "case",
+          ["get", "off"],
+          2,
+          ["get", "faint"],
+          0,
+          1,
+        ],
+        "circle-stroke-color": [
+          "case",
+          ["get", "off"],
+          ["get", "color"],
+          "#ffffff",
+        ],
       },
     })
     return () => {

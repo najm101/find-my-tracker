@@ -1,6 +1,6 @@
 [project]
 name = "find-my-tracker"
-version = "0.6.0"
+version = "0.7.0"
 description = "Self-hosted location history for AirTags and other Find My beacons."
 license = "MIT"
 requires-python = ">=3.13,<3.15"
@@ -20,6 +20,8 @@ dependencies = [
     "argon2-cffi>=25.1",
     "pyotp>=2.9",
     "qrcode>=8.2",
+    "pyvalhalla>=3.9.0,<3.10",
+    "aiohttp>=3.14,<4",
 ]
 
 [project.scripts]

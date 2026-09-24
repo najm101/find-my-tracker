@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  bytes,
   dateTime,
   distance,
   duration,
@@ -75,5 +76,15 @@ describe("clock formats", () => {
 
   it("has a placeholder for nothing", () => {
     expect(dateTime(null)).toBe("—")
+  })
+})
+
+describe("bytes", () => {
+  it.each([
+    [692_170, "692 KB"],
+    [178_506_071, "179 MB"],
+    [1_500_000_000, "1.5 GB"],
+  ])("formats %s", (n, expected) => {
+    expect(bytes(n)).toBe(expected)
   })
 })

@@ -11,7 +11,8 @@ type Point = Schemas["LocationPoint"]
 const GAP_S = GAP_MS / 1000
 /** Shorter segments (the jitter inside a stay) get no arrow. */
 const ARROW_MIN_M = 40
-const ARROW = "fmt-path-arrow-"
+/** Map image name prefix for the direction arrows; the colour follows. */
+export const ARROW = "fmt-path-arrow-"
 
 export type Segment = {
   from: Point
@@ -289,7 +290,7 @@ function haversine(a: Point, b: Point): number {
 }
 
 /** An arrowhead pointing east (along the line): the beacon's colour, outlined in white. */
-function arrowImage(color: string): ImageData {
+export function arrowImage(color: string): ImageData {
   const size = 36 // drawn at 2x, shown at 18 px
   const canvas = document.createElement("canvas")
   canvas.width = size

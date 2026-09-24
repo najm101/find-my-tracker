@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest"
 import {
   getHidden,
   getMode,
+  getRouteMode,
   getShowNoise,
   withHiddenToggled,
   withMode,
+  withRouteMode,
   withShowNoise,
 } from "./search-params"
 
@@ -62,5 +64,20 @@ describe("noise", () => {
   it("round-trips", () => {
     expect(withShowNoise(params(""), true).get("noise")).toBe("show")
     expect(withShowNoise(params("noise=show"), false).toString()).toBe("")
+  })
+})
+
+describe("route mode", () => {
+  it("defaults to the reported path and ignores nonsense", () => {
+    expect(getRouteMode(params(""))).toBe("reported")
+    expect(getRouteMode(params("route=teleport"))).toBe("reported")
+    expect(getRouteMode(params("route=road"))).toBe("road")
+  })
+
+  it("keeps the default out of the URL", () => {
+    expect(
+      withRouteMode(params("route=both&hide=2"), "reported").toString()
+    ).toBe("hide=2")
+    expect(withRouteMode(params(""), "both").get("route")).toBe("both")
   })
 })

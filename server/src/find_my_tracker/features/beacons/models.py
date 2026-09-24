@@ -25,5 +25,7 @@ class Beacon(Base):
     key_blob: Mapped[bytes] = mapped_column(LargeBinary)  # encrypted FindMyAccessory JSON
     paired_at: Mapped[int | None] = mapped_column(Integer)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    #: Lives in a vehicle: its history is snapped to roads as a car's, however slowly it moved.
+    vehicle: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[int] = mapped_column(Integer)
     updated_at: Mapped[int] = mapped_column(Integer)
