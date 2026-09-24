@@ -13,10 +13,13 @@ type Point = Schemas["LocationPoint"]
 export function SightingsLayer({
   points,
   colors,
+  faded = false,
   onPick,
 }: {
   points: Point[]
   colors: Map<number, string>
+  /** Draw every dot faint, as the backdrop to a playback. */
+  faded?: boolean
   onPick?: (point: Point) => void
 }) {
   const { map, isLoaded } = useMap()
@@ -33,11 +36,11 @@ export function SightingsLayer({
         properties: {
           index: i,
           color: colors.get(p.beacon_id) ?? "#2563eb",
-          noisy: p.noise != null,
+          faint: faded || p.noise != null,
         },
       })),
     }),
-    [points, colors]
+    [points, colors, faded]
   )
 
   useEffect(() => {
@@ -50,8 +53,8 @@ export function SightingsLayer({
       paint: {
         "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2.5, 16, 6],
         "circle-color": ["get", "color"],
-        "circle-opacity": ["case", ["get", "noisy"], 0.3, 0.85],
-        "circle-stroke-width": ["case", ["get", "noisy"], 0, 1],
+        "circle-opacity": ["case", ["get", "faint"], 0.3, 0.85],
+        "circle-stroke-width": ["case", ["get", "faint"], 0, 1],
         "circle-stroke-color": "#ffffff",
       },
     })

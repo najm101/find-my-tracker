@@ -4,11 +4,11 @@ import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { MapPopup, useMap } from "~/components/ui/map"
 import type { Schemas } from "~/lib/api/client"
 import { distance, duration, time } from "~/lib/format"
+import { GAP_MS } from "~/lib/playback"
 
 type Point = Schemas["LocationPoint"]
 
-/** Longer than this between two reports, and the line says nothing about how it was travelled. */
-const GAP_S = 30 * 60
+const GAP_S = GAP_MS / 1000
 /** Shorter segments (the jitter inside a stay) get no arrow. */
 const ARROW_MIN_M = 40
 const ARROW = "fmt-path-arrow-"
@@ -25,6 +25,8 @@ type Props = {
   points: Point[]
   colors: Map<number, string>
   selectedId?: number | null
+  /** Draw every path dimmed, as the backdrop to a playback. */
+  faded?: boolean
   /** Called when a segment is clicked, besides showing its popup. */
   onPick?: (segment: Segment) => void
 }
@@ -33,7 +35,13 @@ type Props = {
  * Each beacon's path as segments between consecutive reports, with arrows pointing from the
  * older report to the newer one. A segment is clickable: a popup tells how long it took.
  */
-export function PathLayer({ points, colors, selectedId, onPick }: Props) {
+export function PathLayer({
+  points,
+  colors,
+  selectedId,
+  faded = false,
+  onPick,
+}: Props) {
   const { map, isLoaded } = useMap()
   const id = useId()
   const sourceId = `path-${id}`
@@ -83,12 +91,12 @@ export function PathLayer({ points, colors, selectedId, onPick }: Props) {
           color: colors.get(s.to.beacon_id) ?? "#2563eb",
           gap: s.seconds > GAP_S,
           arrow: s.meters >= ARROW_MIN_M,
-          dim: selectedId != null && s.to.beacon_id !== selectedId,
+          dim: faded || (selectedId != null && s.to.beacon_id !== selectedId),
           selected: s.to.beacon_id === selectedId,
         },
       })),
     }),
-    [segments, colors, selectedId]
+    [segments, colors, selectedId, faded]
   )
 
   useEffect(() => {

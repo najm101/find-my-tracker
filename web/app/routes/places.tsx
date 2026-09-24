@@ -94,6 +94,7 @@ export default function Places({ loaderData }: Route.ComponentProps) {
         >
           <RangePicker
             range={range}
+            now={loadedAt}
             onPreset={(preset) =>
               setParams(withRange(params, { preset }), { replace: true })
             }

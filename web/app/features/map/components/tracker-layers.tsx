@@ -38,6 +38,11 @@ type Props = {
     number | { top: number; bottom: number; left: number; right: number }
   /** A sighting (or stay) to ring, e.g. picked from a timeline. */
   focus?: MapFocus | null
+  /**
+   * History is the backdrop to a playback: paths and dots faded, and no pins, since the
+   * playback draws its own moving ones.
+   */
+  backdrop?: boolean
   /** Called when a history dot is clicked. */
   onPick?: (point: Point) => void
   /** Called when a path segment is clicked (its popup shows either way). */
@@ -54,6 +59,7 @@ export function TrackerLayers({
   frameAround,
   framePadding,
   focus,
+  backdrop = false,
   onPick,
   onPickSegment,
   now,
@@ -99,11 +105,13 @@ export function TrackerLayers({
             points={goodPoints}
             colors={colors}
             selectedId={selectedId}
+            faded={backdrop}
             onPick={onPickSegment}
           />
           <SightingsLayer
             points={visiblePoints}
             colors={colors}
+            faded={backdrop}
             onPick={onPick}
           />
         </>
@@ -112,7 +120,7 @@ export function TrackerLayers({
         // In history mode, pin each beacon at its last sighting inside the range.
         const path = byBeacon.get(b.id)
         const last = points ? path?.[path.length - 1] : undefined
-        if (points && !last) return null
+        if (backdrop || (points && !last)) return null
         return (
           <BeaconMarker
             key={b.id}

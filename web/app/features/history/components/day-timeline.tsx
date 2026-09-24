@@ -28,6 +28,8 @@ export type TimelineTarget = {
   latitude: number
   longitude: number
   key: string
+  /** When: the report's time, or when the stay began. */
+  at: string
 }
 
 const NOISE: Record<Noise, string> = {
@@ -225,6 +227,7 @@ function StayRow({
           latitude: stay.latitude,
           longitude: stay.longitude,
           key: rowKey,
+          at: stay.arrived_at,
         })
       }
       className={cn(ROW, "items-start", highlighted && "bg-primary/15")}
@@ -263,6 +266,7 @@ function PointRow({
           latitude: point.latitude,
           longitude: point.longitude,
           key: point.observed_at,
+          at: point.observed_at,
         })
       }
       className={cn(

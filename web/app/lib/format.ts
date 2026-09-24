@@ -41,6 +41,23 @@ export function time(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, TIME)
 }
 
+/** "Sep 24". */
+export function monthDay(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  })
+}
+
+/** "Wed, Sep 24". */
+export function shortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  })
+}
+
 export function date(iso: string | null | undefined): string {
   if (!iso) return "—"
   return new Date(iso).toLocaleDateString(undefined, { dateStyle: "medium" })

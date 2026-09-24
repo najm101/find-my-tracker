@@ -8,7 +8,14 @@ import {
 } from "~/components/ui/card"
 import { getLocations } from "~/features/history/api/locations"
 import { HistoryToolbar } from "~/features/history/components/history-toolbar"
+import {
+  PLAYBACK_BAR_INSET,
+  PlaybackBar,
+} from "~/features/history/components/playback-bar"
+import { usePlayback } from "~/features/history/hooks/use-playback"
+import { PlaybackLayer } from "~/features/map/components/playback-layer"
 import { TrackerLayers } from "~/features/map/components/tracker-layers"
+import { buildClock, buildTracks } from "~/lib/playback"
 import {
   getHidden,
   getMode,
@@ -16,7 +23,7 @@ import {
   withMode,
   withShowNoise,
 } from "~/lib/search-params"
-import { rangeFromParams, withRange } from "~/lib/time-range"
+import { rangeFromParams, rangeKey, withRange } from "~/lib/time-range"
 
 import type { Route } from "./+types/home"
 import { useLayoutData } from "./authed-layout"
@@ -47,19 +54,38 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const showNoise = getShowNoise(params)
   const shown = history?.points.filter((p) => !hidden.has(p.beacon_id))
   const good = shown?.filter((p) => !p.noise)
+  const tracks = buildTracks(good ?? [], history?.stays ?? [])
+  const clock = buildClock(tracks)
+  const player = usePlayback(clock, `${mode}|${rangeKey(range)}`)
+  const playing = mode === "history" && player.open
 
   return (
     <>
       <TrackerLayers
         beacons={visible}
         points={showNoise ? history?.points : good}
-        fitKey={`home|${mode}|${range.preset}|${range.preset === "custom" ? range.from.toISOString() : ""}`}
+        fitKey={`home|${mode}|${rangeKey(range)}`}
+        backdrop={playing}
         now={loadedAt}
       />
+      {playing && (
+        <>
+          <PlaybackLayer
+            tracks={tracks}
+            beacons={visible}
+            at={player.at}
+            playing={player.playing}
+            follow={player.follow}
+            bottomInset={PLAYBACK_BAR_INSET}
+          />
+          <PlaybackBar clock={clock} player={player} />
+        </>
+      )}
       <div className="pointer-events-none absolute top-3 left-3 z-10">
         <HistoryToolbar
           mode={mode}
           range={range}
+          now={loadedAt}
           filters={{
             from: range.from,
             to: range.to,
@@ -73,6 +99,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           onPreset={(preset) => setParams(withRange(params, { preset }))}
           onCustom={(from, to) => setParams(withRange(params, { from, to }))}
           onShowNoise={(on) => setParams(withShowNoise(params, on))}
+          onPlay={player.play}
+          canPlay={player.playable}
         />
       </div>
       {!located && (

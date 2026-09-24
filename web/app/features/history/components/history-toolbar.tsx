@@ -1,4 +1,7 @@
+import { PlayIcon } from "lucide-react"
+
 import { MapPanel } from "~/components/map-panel"
+import { Button } from "~/components/ui/button"
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group"
 import type { MapMode } from "~/lib/search-params"
 import type { RangePreset, TimeRange } from "~/lib/time-range"
@@ -11,6 +14,8 @@ import { RangePicker } from "./range-picker"
 type Props = {
   mode: MapMode
   range: TimeRange
+  /** When the page's data was loaded. */
+  now: number
   filters: HistoryFilters
   pointCount?: number
   noisyCount?: number
@@ -20,12 +25,16 @@ type Props = {
   onPreset: (preset: RangePreset) => void
   onCustom: (from: Date, to: Date) => void
   onShowNoise?: (show: boolean) => void
+  /** Play the range back; the button is disabled without `canPlay`. */
+  onPlay?: () => void
+  canPlay?: boolean
 }
 
-/** Floating map toolbar: latest vs history, the time range, and export. */
+/** Floating map toolbar: latest vs history, the time range, playback and export. */
 export function HistoryToolbar({
   mode,
   range,
+  now,
   filters,
   pointCount,
   noisyCount = 0,
@@ -35,6 +44,8 @@ export function HistoryToolbar({
   onPreset,
   onCustom,
   onShowNoise,
+  onPlay,
+  canPlay = false,
 }: Props) {
   return (
     <MapPanel className="flex-wrap">
@@ -50,7 +61,24 @@ export function HistoryToolbar({
       </ToggleGroup>
       {mode === "history" && (
         <>
-          <RangePicker range={range} onPreset={onPreset} onCustom={onCustom} />
+          <RangePicker
+            range={range}
+            now={now}
+            onPreset={onPreset}
+            onCustom={onCustom}
+          />
+          {onPlay && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!canPlay}
+              onClick={onPlay}
+            >
+              <PlayIcon />
+              {/* A phone has little room up here: the icon says it. */}
+              <span className="max-sm:sr-only">Play</span>
+            </Button>
+          )}
           <ExportMenu filters={filters} />
           {onShowNoise && (
             <NoiseToggle

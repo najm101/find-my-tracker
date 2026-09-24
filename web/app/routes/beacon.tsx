@@ -1,4 +1,4 @@
-import { ArrowLeftIcon } from "lucide-react"
+import { ArrowLeftIcon, PlayIcon } from "lucide-react"
 import { useState } from "react"
 import { Link, useSearchParams } from "react-router"
 
@@ -16,16 +16,23 @@ import { getLocations } from "~/features/history/api/locations"
 import { DayTimeline } from "~/features/history/components/day-timeline"
 import { ExportMenu } from "~/features/history/components/export-menu"
 import { NoiseToggle } from "~/features/history/components/noise-toggle"
+import {
+  PLAYBACK_BAR_INSET,
+  PlaybackBar,
+} from "~/features/history/components/playback-bar"
 import { RangePicker } from "~/features/history/components/range-picker"
+import { usePlayback } from "~/features/history/hooks/use-playback"
 import { indexStays, rowKeyFor } from "~/features/history/timeline"
+import { PlaybackLayer } from "~/features/map/components/playback-layer"
 import {
   type MapFocus,
   TrackerLayers,
 } from "~/features/map/components/tracker-layers"
 import type { Schemas } from "~/lib/api/client"
 import { BEACON_KINDS } from "~/lib/beacon-kind"
+import { buildClock, buildTracks, reportIndexAt } from "~/lib/playback"
 import { getShowNoise, withShowNoise } from "~/lib/search-params"
-import { rangeFromParams, withRange } from "~/lib/time-range"
+import { rangeFromParams, rangeKey, withRange } from "~/lib/time-range"
 
 import type { Route } from "./+types/beacon"
 import { SidePanel, useLayoutData } from "./authed-layout"
@@ -55,6 +62,10 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
   const [focus, setFocus] = useState<MapFocus | null>(null)
   const showNoise = getShowNoise(params)
   const beacon = beacons.find((b) => b.id === beaconId)
+  // Playback always uses the good reports, and the stays found among them.
+  const tracks = buildTracks(history.points, history.stays)
+  const clock = buildClock(tracks)
+  const player = usePlayback(clock, `${beaconId}|${rangeKey(range)}`)
 
   if (!beacon) {
     return (
@@ -84,6 +95,15 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
   const stays = showNoise ? [] : history.stays
   const stayIndex = indexStays(stays)
   const rowKey = (p: Schemas["LocationPoint"]) => rowKeyFor(stayIndex, p)
+  // While playing, the timeline follows along: the last report passed is its selected row.
+  const track = tracks[0]
+  const passed = track?.points[reportIndexAt(track, player.at)]
+  const playbackKey = passed ? rowKey(passed) : null
+  const selection = player.open
+    ? playbackKey
+      ? { key: playbackKey }
+      : null
+    : focus
 
   return (
     <>
@@ -91,27 +111,45 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
         beacons={[beacon]}
         points={points}
         selectedId={beacon.id}
-        focus={focus}
+        focus={player.open ? null : focus}
+        backdrop={player.open}
         onPick={(p) =>
-          setFocus({
-            latitude: p.latitude,
-            longitude: p.longitude,
-            key: rowKey(p),
-            move: false,
-          })
+          player.open
+            ? player.seek(Date.parse(p.observed_at))
+            : setFocus({
+                latitude: p.latitude,
+                longitude: p.longitude,
+                key: rowKey(p),
+                move: false,
+              })
         }
         onPickSegment={({ from, to }) =>
-          setFocus({
-            latitude: to.latitude,
-            longitude: to.longitude,
-            key: rowKey(to),
-            also: [rowKey(from)],
-            move: false,
-          })
+          player.open
+            ? player.seek(Date.parse(from.observed_at))
+            : setFocus({
+                latitude: to.latitude,
+                longitude: to.longitude,
+                key: rowKey(to),
+                also: [rowKey(from)],
+                move: false,
+              })
         }
-        fitKey={`${beacon.id}|${range.preset}|${range.from.toISOString().slice(0, 10)}`}
+        fitKey={`${beacon.id}|${rangeKey(range)}`}
         now={loadedAt}
       />
+      {player.open && (
+        <>
+          <PlaybackLayer
+            tracks={tracks}
+            beacons={[beacon]}
+            at={player.at}
+            playing={player.playing}
+            follow={player.follow}
+            bottomInset={PLAYBACK_BAR_INSET}
+          />
+          <PlaybackBar clock={clock} player={player} />
+        </>
+      )}
       <SidePanel>
         <Card className="flex min-h-0 w-full flex-col gap-4 rounded-none border-0 border-t md:h-svh md:w-96 md:border-t-0 md:border-l">
           <CardHeader>
@@ -145,11 +183,21 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
             <div className="flex flex-wrap items-center gap-2">
               <RangePicker
                 range={range}
+                now={loadedAt}
                 onPreset={(preset) => setParams(withRange(params, { preset }))}
                 onCustom={(from, to) =>
                   setParams(withRange(params, { from, to }))
                 }
               />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!player.playable}
+                onClick={player.play}
+              >
+                <PlayIcon />
+                Play
+              </Button>
               <ExportMenu filters={filters} />
               <NoiseToggle
                 pressed={showNoise}
@@ -168,8 +216,12 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
             <DayTimeline
               points={points}
               stays={stays}
-              selection={focus}
-              onSelect={(t) => setFocus({ ...t, move: true })}
+              selection={selection}
+              onSelect={(t) =>
+                player.open
+                  ? player.seek(Date.parse(t.at))
+                  : setFocus({ ...t, move: true })
+              }
             />
           </CardContent>
         </Card>
