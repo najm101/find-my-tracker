@@ -21,3 +21,12 @@ export const POLL_INTERVALS: { minutes: number; label: string }[] = [
     label: `Every ${days} days`,
   })),
 ]
+
+/** The interval as a phrase: "every 30 minutes", "once a day", "every 3 days". */
+export function describeInterval(minutes: number): string {
+  const known = POLL_INTERVALS.find((i) => i.minutes === minutes)?.label
+  if (known) return known.charAt(0).toLowerCase() + known.slice(1)
+  if (minutes % DAY === 0) return `every ${minutes / DAY} days`
+  if (minutes % HOUR === 0) return `every ${minutes / HOUR} hours`
+  return `every ${minutes} minutes`
+}

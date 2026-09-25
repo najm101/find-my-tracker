@@ -1,9 +1,7 @@
 import {
   ActivityIcon,
   CircleAlertIcon,
-  LogOutIcon,
   MapIcon,
-  MapPinnedIcon,
   RadarIcon,
   SettingsIcon,
 } from "lucide-react"
@@ -18,7 +16,6 @@ import {
 import { createPortal } from "react-dom"
 import {
   Link,
-  NavLink,
   Outlet,
   redirect,
   useLocation,
@@ -35,20 +32,13 @@ import {
   AlertTitle,
 } from "~/components/ui/alert"
 import { Button } from "~/components/ui/button"
-import { MobileTabBar, type TabItem } from "~/components/mobile-tab-bar"
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-} from "~/components/ui/sidebar"
+  AppSidebar,
+  WithoutFullSidebar,
+  sidebarWasOpen,
+} from "~/components/app-sidebar"
+import { MobileTabBar, type TabItem } from "~/components/mobile-tab-bar"
+import { SidebarInset, SidebarProvider } from "~/components/ui/sidebar"
 import { getAccount } from "~/features/apple-account/api/account"
 import { isAuthenticated, logout } from "~/features/auth/api/auth"
 import { listBeacons } from "~/features/beacons/api/beacons"
@@ -59,7 +49,7 @@ import { getTrackingStatus } from "~/features/tracking/api/tracking"
 import { RefreshButton } from "~/features/tracking/components/refresh-button"
 import { TrackingStatus } from "~/features/tracking/components/tracking-status"
 import { useIsMobile } from "~/hooks/use-mobile"
-import { getHidden, withHiddenToggled } from "~/lib/search-params"
+import { getHidden, withHidden, withHiddenToggled } from "~/lib/search-params"
 
 import type { Route } from "./+types/authed-layout"
 
@@ -133,6 +123,10 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
   const connected = account.status !== "none"
   const [panelSlot, setPanelSlot] = useState<HTMLElement | null>(null)
   const isMobile = useIsMobile()
+  const toggleHidden = (id: number) =>
+    setParams(withHiddenToggled(params, id), { replace: true })
+  const setHidden = (ids: number[]) =>
+    setParams(withHidden(params, ids), { replace: true })
 
   // `revalidator` is a new object on every state change, so hold the function still:
   // the timer below must not restart each time a poll begins or ends.
@@ -156,73 +150,33 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
   }, [status.running])
 
   return (
-    <SidebarProvider>
-      <Sidebar className="hidden md:flex">
-        <SidebarHeader>
-          <Link
-            to="/"
-            className="flex items-center gap-2 px-2 py-1.5 font-medium"
-          >
-            <MapPinnedIcon className="size-5" />
-            Find My Tracker
-          </Link>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {NAV.map((item) => (
-                  <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={
-                        item.end
-                          ? location.pathname === item.to
-                          : location.pathname.startsWith(item.to)
-                      }
-                    >
-                      <NavLink
-                        to={{
-                          pathname: item.to,
-                          search: item.keepView ? params.toString() : "",
-                        }}
-                        end={item.end}
-                      >
-                        <item.icon />
-                        {item.label}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+    <SidebarProvider defaultOpen={sidebarWasOpen()}>
+      <AppSidebar
+        nav={NAV}
+        status={
+          connected && (
+            <>
+              <TrackingStatus status={status} now={loadedAt} inline />
+              <RefreshButton status={status} now={loadedAt} compact />
+            </>
+          )
+        }
+        items={
           <BeaconNav
             beacons={beacons}
             hidden={hidden}
             activeId={activeId}
             now={loadedAt}
-            onToggle={(id) =>
-              setParams(withHiddenToggled(params, id), { replace: true })
-            }
+            onToggle={toggleHidden}
+            onSetHidden={setHidden}
             addHref="/setup"
           />
-        </SidebarContent>
-        <SidebarFooter>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="justify-start"
-            onClick={async () => {
-              await logout()
-              navigate("/login")
-            }}
-          >
-            <LogOutIcon />
-            Log out
-          </Button>
-        </SidebarFooter>
-      </Sidebar>
+        }
+        onLogout={async () => {
+          await logout()
+          navigate("/login")
+        }}
+      />
       <SidebarInset className="relative min-h-svh overflow-hidden">
         {account.status === "needs_reauth" &&
           location.pathname !== "/setup" && (
@@ -261,22 +215,23 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
                         hidden={hidden}
                         activeId={activeId}
                         now={loadedAt}
-                        onToggle={(id) =>
-                          setParams(withHiddenToggled(params, id), {
-                            replace: true,
-                          })
-                        }
+                        onToggle={toggleHidden}
+                        onSetHidden={setHidden}
                       />
                     )
                   }
                   controls={
                     connected && (
-                      <RefreshButton status={status} now={loadedAt} />
+                      <WithoutFullSidebar>
+                        <RefreshButton status={status} now={loadedAt} />
+                      </WithoutFullSidebar>
                     )
                   }
                   status={
                     connected && (
-                      <TrackingStatus status={status} now={loadedAt} />
+                      <WithoutFullSidebar>
+                        <TrackingStatus status={status} now={loadedAt} />
+                      </WithoutFullSidebar>
                     )
                   }
                 >

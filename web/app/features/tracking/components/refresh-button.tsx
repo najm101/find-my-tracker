@@ -7,13 +7,15 @@ import { timeAgo } from "~/lib/format"
 
 import { useRefreshNow } from "../hooks/use-refresh-now"
 
-/** "Check now", for the map's control group. */
+/** "Check now": in the map's control group, or as an icon (`compact`) beside the status. */
 export function RefreshButton({
   status,
   now,
+  compact = false,
 }: {
   status: Schemas["TrackingStatus"]
   now: number
+  compact?: boolean
 }) {
   const { refresh, refreshing } = useRefreshNow()
   const busy = refreshing || status.running
@@ -23,8 +25,9 @@ export function RefreshButton({
 
   return (
     <Button
-      variant="outline"
-      size="sm"
+      variant={compact ? "ghost" : "outline"}
+      size={compact ? "icon-sm" : "sm"}
+      aria-label={compact ? "Check for new locations now" : undefined}
       onClick={refresh}
       disabled={busy || cooling || status.account_status !== "active"}
       title={
@@ -34,7 +37,7 @@ export function RefreshButton({
       }
     >
       {busy ? <Spinner /> : <RefreshCwIcon />}
-      {status.running ? "Checking…" : "Refresh"}
+      {!compact && (status.running ? "Checking…" : "Refresh")}
     </Button>
   )
 }

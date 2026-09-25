@@ -6,6 +6,7 @@ import {
 } from "~/components/ui/tooltip"
 import type { Schemas } from "~/lib/api/client"
 import { dateTime, timeAgo } from "~/lib/format"
+import { describeInterval } from "~/lib/poll-intervals"
 import { cn } from "~/lib/utils"
 
 const FAILED: Partial<Record<Schemas["PollOutcome"], string>> = {
@@ -17,10 +18,12 @@ const FAILED: Partial<Record<Schemas["PollOutcome"], string>> = {
 type Props = {
   status: Schemas["TrackingStatus"]
   now: number
+  /** Plain text in a line (the sidebar), not a pill floating on the map. */
+  inline?: boolean
 }
 
-/** The map's status pill: health dot and last check, with details on hover. */
-export function TrackingStatus({ status, now }: Props) {
+/** The status of checks: health dot and last check, with details on hover. */
+export function TrackingStatus({ status, now, inline = false }: Props) {
   const last = status.last_run
   const failed = last?.outcome ? FAILED[last.outcome] : undefined
   const summary = status.running
@@ -29,10 +32,18 @@ export function TrackingStatus({ status, now }: Props) {
       ? `${failed ?? "Checked"} ${timeAgo(last.started_at, now)}`
       : "No checks yet"
 
+  const Surface = inline ? "span" : MapPanel
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <MapPanel className="gap-2 px-2.5 py-1.5 text-xs">
+        <Surface
+          className={cn(
+            "gap-2 text-xs",
+            inline
+              ? "flex min-w-0 items-center text-muted-foreground"
+              : "px-2.5 py-1.5"
+          )}
+        >
           <span
             className={cn(
               "size-2 shrink-0 rounded-full",
@@ -43,8 +54,8 @@ export function TrackingStatus({ status, now }: Props) {
                   : "bg-primary"
             )}
           />
-          <span className="whitespace-nowrap">{summary}</span>
-        </MapPanel>
+          <span className="truncate whitespace-nowrap">{summary}</span>
+        </Surface>
       </TooltipTrigger>
       <TooltipContent side="top" align="start" className="max-w-64">
         {last ? (
@@ -57,7 +68,7 @@ export function TrackingStatus({ status, now }: Props) {
           "Waiting for the first check."
         )}
         <br />
-        Checks every {status.interval_minutes} min
+        Checks {describeInterval(status.interval_minutes)}
         {status.next_run_at && !status.running && (
           <>, next {timeAgo(status.next_run_at, now)}</>
         )}

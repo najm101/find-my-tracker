@@ -41,6 +41,18 @@ export function withHiddenToggled(
   return next
 }
 
+/** Hide exactly these beacons (none: show them all). */
+export function withHidden(
+  params: URLSearchParams,
+  ids: Iterable<number>
+): URLSearchParams {
+  const next = new URLSearchParams(params)
+  const list = [...ids]
+  if (list.length) next.set("hide", list.join(","))
+  else next.delete("hide")
+  return next
+}
+
 /** History shows only good reports unless `noise=show`. */
 export function getShowNoise(params: URLSearchParams): boolean {
   return params.get("noise") === "show"

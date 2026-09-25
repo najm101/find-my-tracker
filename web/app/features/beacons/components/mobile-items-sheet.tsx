@@ -19,6 +19,7 @@ type Props = {
   activeId: number | null
   now: number
   onToggle: (id: number) => void
+  onSetHidden: (ids: number[]) => void
 }
 
 /**
@@ -32,6 +33,7 @@ export function MobileItemsSheet({
   activeId,
   now,
   onToggle,
+  onSetHidden,
 }: Props) {
   const [open, setOpen] = useState(false)
   const shown = beacons.length - hidden.size
@@ -72,6 +74,7 @@ export function MobileItemsSheet({
             activeId={activeId}
             now={now}
             onToggle={onToggle}
+            onSetHidden={onSetHidden}
             addHref="/setup"
           />
         </div>
