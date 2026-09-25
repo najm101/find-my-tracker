@@ -51,3 +51,19 @@ export function slice(
   const inside = line.filter((_, i) => along[i] > from && along[i] < to)
   return [start, ...inside, end]
 }
+
+/** Metres between two positions along the earth's surface (haversine). */
+export function metresBetween(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number }
+): number {
+  const rad = Math.PI / 180
+  const dLat = (b.latitude - a.latitude) * rad
+  const dLon = (b.longitude - a.longitude) * rad
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.latitude * rad) *
+      Math.cos(b.latitude * rad) *
+      Math.sin(dLon / 2) ** 2
+  return 2 * 6_371_008.8 * Math.asin(Math.sqrt(h))
+}

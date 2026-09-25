@@ -61,8 +61,10 @@ type Props = {
   predicting?: boolean
   /** `tripKey`s of predicted routes to draw in as they arrive. */
   drawIn?: ReadonlySet<string>
-  /** Called when a history dot is clicked. */
-  onPick?: (point: Point) => void
+  /** `reportKey`s of history dots to make stand out (the rest are drawn as usual, or faded). */
+  highlight?: ReadonlySet<string>
+  /** Called when a history dot is clicked; `false` lets the click through to the map. */
+  onPick?: (point: Point) => boolean | void
   /** Called when a path segment is clicked (its popup shows either way). */
   onPickSegment?: (segment: Segment) => void
   now: number
@@ -82,6 +84,7 @@ export function TrackerLayers({
   predicted,
   predicting = false,
   drawIn,
+  highlight,
   onPick,
   onPickSegment,
   now,
@@ -161,6 +164,7 @@ export function TrackerLayers({
             colors={colors}
             faded={backdrop}
             offRoute={routes ? offRouteKeys(routes) : undefined}
+            highlight={highlight}
             onPick={onPick}
           />
         </>

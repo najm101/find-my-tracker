@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { MapPopup, useMap } from "~/components/ui/map"
 import type { Schemas } from "~/lib/api/client"
 import { distance, duration, time } from "~/lib/format"
+import { metresBetween } from "~/lib/geometry"
 import { GAP_MS } from "~/lib/playback"
 import { reportKey } from "~/lib/predicted-routes"
 
@@ -81,7 +82,7 @@ export function PathLayer({
           (new Date(to.observed_at).getTime() -
             new Date(from.observed_at).getTime()) /
           1000,
-        meters: haversine(from, to),
+        meters: metresBetween(from, to),
       })
     }
     return out
@@ -287,18 +288,6 @@ function SegmentDetails({ segment }: { segment: Segment }) {
       )}
     </div>
   )
-}
-
-function haversine(a: Point, b: Point): number {
-  const rad = Math.PI / 180
-  const dLat = (b.latitude - a.latitude) * rad
-  const dLon = (b.longitude - a.longitude) * rad
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(a.latitude * rad) *
-      Math.cos(b.latitude * rad) *
-      Math.sin(dLon / 2) ** 2
-  return 2 * 6_371_008.8 * Math.asin(Math.sqrt(h))
 }
 
 /** An arrowhead pointing east (along the line): the beacon's colour, outlined in white. */

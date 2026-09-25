@@ -8,15 +8,17 @@ import { reportKey } from "~/lib/predicted-routes"
 type Point = Schemas["LocationPoint"]
 
 /**
- * Every sighting as a small dot, coloured per beacon; noisy ones faint, and ones a predicted route left
- * off the route hollow. A single circle layer, because thousands of DOM markers would be far too
- * slow. Dots are clickable when `onPick` is set.
+ * Every sighting as a small dot, coloured per beacon; noisy ones faint, ones a predicted route left
+ * off the route hollow, and highlighted ones larger and ringed, on top. A single circle layer,
+ * because thousands of DOM markers would be far too slow. Dots are clickable when `onPick` is
+ * set; a click it handles (anything but `false`) doesn't reach other map click handlers.
  */
 export function SightingsLayer({
   points,
   colors,
   faded = false,
   offRoute,
+  highlight,
   onPick,
 }: {
   points: Point[]
@@ -25,7 +27,10 @@ export function SightingsLayer({
   faded?: boolean
   /** `reportKey`s of reports off the predicted route. */
   offRoute?: Set<string>
-  onPick?: (point: Point) => void
+  /** `reportKey`s of reports to make stand out, e.g. the ones inside a place's circle. */
+  highlight?: ReadonlySet<string>
+  /** Return `false` to let the click through to the map. */
+  onPick?: (point: Point) => boolean | void
 }) {
   const { map, isLoaded } = useMap()
   const id = useId()
@@ -35,18 +40,23 @@ export function SightingsLayer({
   const data = useMemo<GeoJSON.FeatureCollection>(
     () => ({
       type: "FeatureCollection",
-      features: points.map((p, i) => ({
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [p.longitude, p.latitude] },
-        properties: {
-          index: i,
-          color: colors.get(p.beacon_id) ?? "#2563eb",
-          faint: faded || p.noise != null,
-          off: offRoute?.has(reportKey(p.beacon_id, p.observed_at)) ?? false,
-        },
-      })),
+      features: points.map((p, i) => {
+        const key = reportKey(p.beacon_id, p.observed_at)
+        const hl = highlight?.has(key) ?? false
+        return {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [p.longitude, p.latitude] },
+          properties: {
+            index: i,
+            color: colors.get(p.beacon_id) ?? "#2563eb",
+            faint: !hl && (faded || p.noise != null),
+            off: offRoute?.has(key) ?? false,
+            hl,
+          },
+        }
+      }),
     }),
-    [points, colors, faded, offRoute]
+    [points, colors, faded, offRoute, highlight]
   )
 
   useEffect(() => {
@@ -56,15 +66,34 @@ export function SightingsLayer({
       id: layerId,
       type: "circle",
       source: sourceId,
+      // Highlighted dots on top of the rest.
+      layout: { "circle-sort-key": ["case", ["get", "hl"], 1, 0] },
       paint: {
-        "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2.5, 16, 6],
+        "circle-radius": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          8,
+          ["case", ["get", "hl"], 4.5, 2.5],
+          16,
+          ["case", ["get", "hl"], 9, 6],
+        ],
         // Off the route: hollow, a ring in the item's colour.
         "circle-color": ["case", ["get", "off"], "#ffffff", ["get", "color"]],
-        "circle-opacity": ["case", ["get", "faint"], 0.3, 0.85],
+        "circle-opacity": [
+          "case",
+          ["get", "hl"],
+          1,
+          ["get", "faint"],
+          0.3,
+          0.85,
+        ],
         "circle-stroke-width": [
           "case",
           ["get", "off"],
           2,
+          ["get", "hl"],
+          2.5,
           ["get", "faint"],
           0,
           1,
@@ -107,7 +136,7 @@ export function SightingsLayer({
       const index = e.features?.[0]?.properties?.index
       const point =
         typeof index === "number" ? pick.current.points[index] : undefined
-      if (point) pick.current.onPick?.(point)
+      if (point && pick.current.onPick?.(point) !== false) e.preventDefault()
     }
     const enter = () => (map.getCanvas().style.cursor = "pointer")
     const leave = () => (map.getCanvas().style.cursor = "")
