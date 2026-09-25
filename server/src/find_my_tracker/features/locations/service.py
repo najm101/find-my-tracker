@@ -71,6 +71,21 @@ class LocationService:
     async def count_by_beacon(self, beacon_ids: Sequence[int]) -> dict[int, int]:
         return await self._repo.count_by_beacon(beacon_ids)
 
+    # ---- retention ----
+
+    async def newest_by_beacon(self) -> dict[int, int]:
+        return await self._repo.newest_by_beacon()
+
+    async def oldest(self) -> int | None:
+        return await self._repo.oldest()
+
+    async def count_before(self, beacon_id: int, before: int) -> int:
+        return await self._repo.count_before(beacon_id, before)
+
+    async def delete_before(self, beacon_id: int, before: int, limit: int) -> int:
+        """Deletes up to `limit` reports; the caller commits between batches."""
+        return await self._repo.delete_before(beacon_id, before, limit)
+
     async def history(
         self,
         span: TimeRange,

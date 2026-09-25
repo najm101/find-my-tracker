@@ -6,8 +6,7 @@ import {
   Trash2Icon,
   XIcon,
 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
-import { useRevalidator } from "react-router"
+import { useState } from "react"
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import {
@@ -51,6 +50,7 @@ import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group"
 import { Spinner } from "~/components/ui/spinner"
 import { Switch } from "~/components/ui/switch"
 import { useMutation } from "~/hooks/use-mutation"
+import { useRefreshWhile } from "~/hooks/use-refresh-while"
 import type { Schemas } from "~/lib/api/client"
 import { bytes, timeAgo } from "~/lib/format"
 
@@ -490,20 +490,4 @@ function DeleteMapData({
       </AlertDialogContent>
     </AlertDialog>
   )
-}
-
-/** Reload the page's data every few seconds while downloads or a build are under way. */
-function useRefreshWhile(active: boolean) {
-  const revalidator = useRevalidator()
-  // `revalidator` changes on every state change; hold the function still so the timer doesn't
-  // restart each time a reload begins or ends.
-  const revalidate = useRef(revalidator.revalidate)
-  useEffect(() => {
-    revalidate.current = revalidator.revalidate
-  })
-  useEffect(() => {
-    if (!active) return
-    const id = setInterval(() => void revalidate.current(), 2_000)
-    return () => clearInterval(id)
-  }, [active])
 }

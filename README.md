@@ -75,6 +75,10 @@ Android and don't want to run a server, use OpenTagViewer. It's great.
 - **Near a place**: pick a point and a radius and see which items were there, when, and for how
   long
 - **Export** any range as CSV or GeoJSON
+- **Keep history for as long as you choose**: everything (the default), or 30 days up to 2
+  years, in Settings → Data. A shorter period says how many sightings it will delete, and offers
+  a download of them, before it deletes anything. Each item's last known position is always
+  kept, so a lost item can still be found
 - **Background polling** every 30 minutes by default, or as rarely as once a week if you only
   need the history (say, as a backup to a car's own GPS), plus a manual refresh. A check that
   fails is retried within the hour
@@ -137,7 +141,7 @@ guaranteed iPhone right beside it the whole way.
   your Apple session (including your Apple ID password), and iCloud Keychain keys, all encrypted
   with your `SECRET_KEY`. Anyone who gets the `data/` folder **and** `SECRET_KEY` can locate your
   items until you unpair them. Your location history is stored unencrypted, so anyone who gets
-  the database reads it. Protect both, and if the dashboard is reachable from outside your
+  the database reads it; Settings → Data can limit how much of it there is. Protect both, and if the dashboard is reachable from outside your
   network, read [Putting it on the internet](#putting-it-on-the-internet-) before you open it up.
 - **It appears as a Mac in your Apple account.** Signing in adds one device to your account's
   device list: a MacBook Pro with a serial starting `0FMTRK` (the app shows the full serial). Each

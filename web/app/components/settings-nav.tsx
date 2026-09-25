@@ -1,6 +1,7 @@
 import {
   BracesIcon,
   ChevronRightIcon,
+  DatabaseIcon,
   KeyRoundIcon,
   type LucideIcon,
   PaletteIcon,
@@ -50,6 +51,12 @@ export const SETTINGS_SECTIONS: Section[] = [
     label: "Predicted routes",
     description: "The routing engine and its map data",
     icon: RouteIcon,
+  },
+  {
+    to: "data",
+    label: "Data",
+    description: "How long history is kept",
+    icon: DatabaseIcon,
   },
   {
     to: "account",

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from find_my_tracker.features.apple_account.identity import DeviceIdentityService
     from find_my_tracker.features.apple_account.wizard import WizardManager
     from find_my_tracker.features.auth.service import AdminAuth, LoginRateLimiter
+    from find_my_tracker.features.retention.job import RetentionJob
     from find_my_tracker.features.routing.runtime import RoutingRuntime
     from find_my_tracker.features.tracking.poller import Poller
     from find_my_tracker.integrations.apple.types import AppleClientFactory
@@ -32,3 +33,4 @@ class Container:
     wizards: WizardManager
     poller: Poller
     routing: RoutingRuntime
+    retention: RetentionJob

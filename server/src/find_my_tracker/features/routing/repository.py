@@ -36,5 +36,8 @@ class RouteCacheRepository:
             )
         )
 
+    async def delete_before(self, trip_start: int) -> None:
+        await self._session.execute(delete(RouteCache).where(RouteCache.trip_start < trip_start))
+
     async def clear(self) -> None:
         await self._session.execute(delete(RouteCache))

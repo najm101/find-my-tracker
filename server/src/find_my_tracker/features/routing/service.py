@@ -268,6 +268,10 @@ class RoutingService:
             if region:
                 self._runtime.builtin.add(region.id, region.name, region.pbf_url, auto=True)
 
+    async def forget_before(self, cutoff: int) -> None:
+        """Drops the cached routes of trips that started before `cutoff`. Does not commit."""
+        await self._cache.delete_before(cutoff)
+
     async def _require_builtin(self) -> None:
         if (await self.config()).mode is not RoutingMode.BUILTIN:
             msg = "Map regions are for the built-in routing engine; it isn't the one in use."

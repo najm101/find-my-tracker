@@ -459,6 +459,47 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  "/api/retention": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get Status */
+    get: operations["get_status_api_retention_get"]
+    /**
+     * Update
+     * @description Keep history for `days`, or for good (null). A shorter period deletes the rest soon after.
+     */
+    put: operations["update_api_retention_put"]
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/retention/preview": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Preview
+     * @description What keeping `days` would delete right now.
+     */
+    get: operations["preview_api_retention_preview_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/api/routing": {
     parameters: {
       query?: never
@@ -1149,6 +1190,67 @@ export interface components {
       id: string
       /** Name */
       name: string
+    }
+    /** RetentionPreview */
+    RetentionPreview: {
+      /**
+       * Cutoff
+       * Format: date-time
+       */
+      cutoff: string
+      /** Days */
+      days: number
+      /**
+       * Items
+       * @description How many items those sightings belong to.
+       */
+      items: number
+      /**
+       * Sightings
+       * @description Sightings that would be deleted now. Each item's newest one is always kept.
+       */
+      sightings: number
+    }
+    /** RetentionRun */
+    RetentionRun: {
+      /**
+       * At
+       * Format: date-time
+       */
+      at: string
+      /**
+       * Cutoff
+       * Format: date-time
+       */
+      cutoff: string
+      /** Deleted */
+      deleted: number
+    }
+    /** RetentionStatus */
+    RetentionStatus: {
+      /**
+       * Cutoff
+       * @description Sightings before this go, when `days` is set.
+       */
+      cutoff: string | null
+      /**
+       * Days
+       * @description Sightings older than this are deleted. Null: kept.
+       */
+      days: number | null
+      last_run: components["schemas"]["RetentionRun"] | null
+      /**
+       * Oldest
+       * @description The oldest sighting stored.
+       */
+      oldest: string | null
+      /** Running */
+      running: boolean
+    }
+    /** RetentionUpdate */
+    RetentionUpdate: {
+      /** Days */
+      days: number | null
     }
     /** RoutedReport */
     RoutedReport: {
@@ -2208,6 +2310,90 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["VisitsResponse"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  get_status_api_retention_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RetentionStatus"]
+        }
+      }
+    }
+  }
+  update_api_retention_put: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RetentionUpdate"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RetentionStatus"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  preview_api_retention_preview_get: {
+    parameters: {
+      query: {
+        days: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RetentionPreview"]
         }
       }
       /** @description Validation Error */

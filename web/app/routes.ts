@@ -17,6 +17,7 @@ export default [
       route("tracking", "routes/settings/tracking.tsx"),
       route("items", "routes/settings/items.tsx"),
       route("predicted-routes", "routes/settings/predicted-routes.tsx"),
+      route("data", "routes/settings/data.tsx"),
       route("account", "routes/settings/account.tsx"),
       route("security", "routes/settings/security.tsx"),
       route("appearance", "routes/settings/appearance.tsx"),

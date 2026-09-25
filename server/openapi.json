@@ -1229,6 +1229,149 @@
         "title": "RegionSuggestion",
         "type": "object"
       },
+      "RetentionPreview": {
+        "properties": {
+          "cutoff": {
+            "format": "date-time",
+            "title": "Cutoff",
+            "type": "string"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "items": {
+            "description": "How many items those sightings belong to.",
+            "title": "Items",
+            "type": "integer"
+          },
+          "sightings": {
+            "description": "Sightings that would be deleted now. Each item's newest one is always kept.",
+            "title": "Sightings",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days",
+          "cutoff",
+          "sightings",
+          "items"
+        ],
+        "title": "RetentionPreview",
+        "type": "object"
+      },
+      "RetentionRun": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "cutoff": {
+            "format": "date-time",
+            "title": "Cutoff",
+            "type": "string"
+          },
+          "deleted": {
+            "title": "Deleted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "at",
+          "cutoff",
+          "deleted"
+        ],
+        "title": "RetentionRun",
+        "type": "object"
+      },
+      "RetentionStatus": {
+        "properties": {
+          "cutoff": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sightings before this go, when `days` is set.",
+            "title": "Cutoff"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sightings older than this are deleted. Null: kept.",
+            "title": "Days"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetentionRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "oldest": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The oldest sighting stored.",
+            "title": "Oldest"
+          },
+          "running": {
+            "title": "Running",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "days",
+          "cutoff",
+          "oldest",
+          "last_run",
+          "running"
+        ],
+        "title": "RetentionStatus",
+        "type": "object"
+      },
+      "RetentionUpdate": {
+        "properties": {
+          "days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 30.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          }
+        },
+        "required": [
+          "days"
+        ],
+        "title": "RetentionUpdate",
+        "type": "object"
+      },
       "RoutedReport": {
         "properties": {
           "latitude": {
@@ -3082,6 +3225,112 @@
         "summary": "Visits",
         "tags": [
           "locations"
+        ]
+      }
+    },
+    "/api/retention": {
+      "get": {
+        "operationId": "get_status_api_retention_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Status",
+        "tags": [
+          "retention"
+        ]
+      },
+      "put": {
+        "description": "Keep history for `days`, or for good (null). A shorter period deletes the rest soon after.",
+        "operationId": "update_api_retention_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update",
+        "tags": [
+          "retention"
+        ]
+      }
+    },
+    "/api/retention/preview": {
+      "get": {
+        "description": "What keeping `days` would delete right now.",
+        "operationId": "preview_api_retention_preview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": true,
+            "schema": {
+              "maximum": 3650,
+              "minimum": 30,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview",
+        "tags": [
+          "retention"
         ]
       }
     },

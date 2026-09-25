@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sqlalchemy import ColumnElement, Select, and_, column, func, select, table
+from sqlalchemy import ColumnElement, Select, and_, column, delete, func, select, table
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from find_my_tracker.core.database import insert_for
@@ -94,6 +94,32 @@ class LocationRepository:
             & (Location.observed_at == newest.c.observed_at),
         )
         return {loc.beacon_id: loc for loc in await self._session.scalars(stmt)}
+
+    async def newest_by_beacon(self) -> dict[int, int]:
+        """Every beacon's newest report time."""
+        stmt = select(Location.beacon_id, func.max(Location.observed_at)).group_by(
+            Location.beacon_id
+        )
+        return dict((await self._session.execute(stmt)).tuples().all())
+
+    async def oldest(self) -> int | None:
+        return await self._session.scalar(select(func.min(Location.observed_at)))
+
+    async def count_before(self, beacon_id: int, before: int) -> int:
+        stmt = select(func.count()).where(
+            Location.beacon_id == beacon_id, Location.observed_at < before
+        )
+        return await self._session.scalar(stmt) or 0
+
+    async def delete_before(self, beacon_id: int, before: int, limit: int) -> int:
+        """Up to `limit` of a beacon's reports older than `before`. Returns how many went."""
+        doomed = (
+            select(Location.id)
+            .where(Location.beacon_id == beacon_id, Location.observed_at < before)
+            .limit(limit)
+        )
+        stmt = delete(Location).where(Location.id.in_(doomed)).returning(Location.id)
+        return len((await self._session.execute(stmt)).all())
 
     async def count_by_beacon(self, beacon_ids: Sequence[int]) -> dict[int, int]:
         if not beacon_ids:

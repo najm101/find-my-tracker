@@ -26,6 +26,9 @@ from find_my_tracker.features.auth.service import AdminAuth, AuthService, LoginR
 from find_my_tracker.features.beacons.router import router as beacons_router
 from find_my_tracker.features.health.router import router as health_router
 from find_my_tracker.features.locations.router import router as locations_router
+from find_my_tracker.features.retention.job import RetentionJob
+from find_my_tracker.features.retention.router import router as retention_router
+from find_my_tracker.features.retention.service import RetentionService
 from find_my_tracker.features.routing.jobs import Matcher, cache_in
 from find_my_tracker.features.routing.router import router as routing_router
 from find_my_tracker.features.routing.runtime import RoutingRuntime
@@ -103,7 +106,14 @@ def build_container(
             ),
         ),
         routing=routing,
+        retention=RetentionJob(),
     )
+
+    async def clean() -> None:
+        async with db.session() as session:
+            await RetentionService(session, container).clean()
+
+    container.retention.clean = clean
 
     async def after_poll() -> None:
         async with db.session() as session:
@@ -132,9 +142,11 @@ def create_app(settings: Settings | None = None, container: Container | None = N
             if (await routing.config()).mode is RoutingMode.BUILTIN:
                 await container.routing.use_builtin(True)
         container.poller.start()
+        container.retention.start()
         try:
             yield
         finally:
+            await container.retention.stop()
             await container.poller.stop()
             await container.routing.close()
             await container.wizards.discard()
@@ -164,6 +176,7 @@ def create_app(settings: Settings | None = None, container: Container | None = N
         settings_router,
         docs_router,
         routing_router,
+        retention_router,
     ):
         api.include_router(router)
     app.include_router(api)
