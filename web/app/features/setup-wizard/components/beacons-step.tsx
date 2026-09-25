@@ -24,14 +24,7 @@ import {
 import { Spinner } from "~/components/ui/spinner"
 import type { Schemas } from "~/lib/api/client"
 import { BEACON_KINDS } from "~/lib/beacon-kind"
-
-const INTERVALS = [
-  { minutes: 15, label: "Every 15 minutes (higher ban risk)" },
-  { minutes: 30, label: "Every 30 minutes (recommended)" },
-  { minutes: 60, label: "Every hour" },
-  { minutes: 120, label: "Every 2 hours" },
-  { minutes: 360, label: "Every 6 hours" },
-]
+import { DEFAULT_POLL_MINUTES, POLL_INTERVALS } from "~/lib/poll-intervals"
 
 type Props = {
   busy: boolean
@@ -53,7 +46,7 @@ export function BeaconsStep({ busy, beacons, adding, onSubmit }: Props) {
           .map((b) => b.identifier)
       )
   )
-  const [interval, setInterval] = useState("30")
+  const [interval, setInterval] = useState(String(DEFAULT_POLL_MINUTES))
 
   const toggle = (id: string, on: boolean) =>
     setSelected((prev) => {
@@ -145,7 +138,7 @@ export function BeaconsStep({ busy, beacons, adding, onSubmit }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {INTERVALS.map((i) => (
+                {POLL_INTERVALS.map((i) => (
                   <SelectItem key={i.minutes} value={String(i.minutes)}>
                     {i.label}
                   </SelectItem>
@@ -153,9 +146,10 @@ export function BeaconsStep({ busy, beacons, adding, onSubmit }: Props) {
               </SelectContent>
             </Select>
             <FieldDescription>
-              History is complete at any interval: Apple keeps about 7 days of
-              reports and every check collects all of them. The interval only
-              changes how fresh the latest position is.
+              Apple keeps about 7 days of reports and every check collects all
+              of them, so history is complete at any interval under a week.
+              Every 30 minutes keeps the map current; once a day is enough if
+              you only need the history. You can change it later in Settings.
             </FieldDescription>
           </Field>
         )}

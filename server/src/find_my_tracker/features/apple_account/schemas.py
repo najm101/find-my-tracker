@@ -7,6 +7,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from find_my_tracker.features.apple_account.wizard import WizardStep
+from find_my_tracker.features.settings.schemas import MAX_POLL_MINUTES, MIN_POLL_MINUTES
 from find_my_tracker.integrations.apple.types import BeaconKind
 
 
@@ -92,4 +93,6 @@ class UnlockRequest(BaseModel):
 
 class ImportRequest(BaseModel):
     identifiers: list[str] = Field(min_length=1)
-    poll_interval_minutes: int | None = Field(default=None, ge=15, le=24 * 60)
+    poll_interval_minutes: int | None = Field(
+        default=None, ge=MIN_POLL_MINUTES, le=MAX_POLL_MINUTES
+    )

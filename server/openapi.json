@@ -84,9 +84,9 @@
         "properties": {
           "poll_interval_minutes": {
             "default": 30,
-            "description": "Minutes between polls. Below 30 raises the risk of an Apple account ban.",
-            "maximum": 1440.0,
-            "minimum": 15.0,
+            "description": "Minutes between checks: 30 minutes to 7 days.",
+            "maximum": 10080.0,
+            "minimum": 30.0,
             "title": "Poll Interval Minutes",
             "type": "integer"
           }
@@ -669,8 +669,8 @@
           "poll_interval_minutes": {
             "anyOf": [
               {
-                "maximum": 1440.0,
-                "minimum": 15.0,
+                "maximum": 10080.0,
+                "minimum": 30.0,
                 "type": "integer"
               },
               {
@@ -1485,8 +1485,8 @@
           "poll_interval_minutes": {
             "anyOf": [
               {
-                "maximum": 1440.0,
-                "minimum": 15.0,
+                "maximum": 10080.0,
+                "minimum": 30.0,
                 "type": "integer"
               },
               {

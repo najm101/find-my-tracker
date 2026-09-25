@@ -64,6 +64,20 @@ def test_expired_session_pauses(
     assert admin.get("/api/apple/account").json()["status"] == "active"
 
 
+def test_a_failed_check_is_retried_within_the_hour(admin: TestClient, container: Container) -> None:
+    sign_in(admin)
+    admin.patch("/api/settings", json={"poll_interval_minutes": 7 * 24 * 60})
+    poll(container)
+    week = asyncio.run(container.poller._seconds_until_due())
+    assert 7 * 86400 - 60 < week <= 7 * 86400
+
+    db = sqlite3.connect(container.settings.database_path)
+    db.execute("UPDATE poll_runs SET outcome = 'apple_error'")
+    db.commit()
+    retry = asyncio.run(container.poller._seconds_until_due())
+    assert 3600 - 60 < retry <= 3600
+
+
 def test_manual_refresh_cooldown(admin: TestClient, container: Container) -> None:
     sign_in(admin)
     poll(container)

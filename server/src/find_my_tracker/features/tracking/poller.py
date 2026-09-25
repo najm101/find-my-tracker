@@ -17,13 +17,16 @@ from find_my_tracker.core.clock import Clock, to_datetime
 from find_my_tracker.core.database import Database
 from find_my_tracker.core.errors import Conflict, TooManyRequests
 from find_my_tracker.features.settings.service import SettingsService
-from find_my_tracker.features.tracking.schemas import PollTrigger
+from find_my_tracker.features.tracking.schemas import PollOutcome, PollTrigger
 from find_my_tracker.features.tracking.service import PollService
 
 logger = logging.getLogger(__name__)
 
 MANUAL_COOLDOWN_SECONDS = 60  # stops double-clicks from hammering Apple
 IDLE_RECHECK_SECONDS = 60
+#: A check that failed is tried again this soon, however long the interval: waiting days for the
+#: next one would let reports age out of Apple's week.
+RETRY_FAILED_SECONDS = 60 * 60
 STARTUP_DELAY_SECONDS = 5
 
 
@@ -135,6 +138,8 @@ class Poller:
         async with self._db.session() as session:
             interval = (await SettingsService(session).get()).poll_interval_minutes * 60
         last = await self._service.latest()
+        if last and last.outcome in (PollOutcome.APPLE_ERROR, PollOutcome.ERROR):
+            interval = min(interval, RETRY_FAILED_SECONDS)
         due = max((last.started_at + interval) if last else 0, self._not_before)
         now = self._clock.timestamp()
         self.next_run_at = to_datetime(max(due, now))

@@ -5,7 +5,12 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from find_my_tracker.features.settings.repository import SettingsRepository
-from find_my_tracker.features.settings.schemas import AppSettings, SettingsUpdate
+from find_my_tracker.features.settings.schemas import (
+    MAX_POLL_MINUTES,
+    MIN_POLL_MINUTES,
+    AppSettings,
+    SettingsUpdate,
+)
 
 
 class SettingsService:
@@ -16,6 +21,9 @@ class SettingsService:
     async def get(self) -> AppSettings:
         stored = await self._repo.all()
         known = {k: v for k, v in stored.items() if k in AppSettings.model_fields}
+        if isinstance(interval := known.get("poll_interval_minutes"), int):
+            # Earlier versions allowed checks every 15 minutes.
+            known["poll_interval_minutes"] = min(max(interval, MIN_POLL_MINUTES), MAX_POLL_MINUTES)
         return AppSettings.model_validate(known)
 
     async def value(self, key: str, default: Any = None) -> Any:

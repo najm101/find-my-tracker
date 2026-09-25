@@ -1,4 +1,4 @@
-import { TriangleAlertIcon } from "lucide-react"
+import { InfoIcon } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert"
 import {
@@ -19,21 +19,9 @@ import {
 import { useMutation } from "~/hooks/use-mutation"
 import type { Schemas } from "~/lib/api/client"
 import { timeAgo } from "~/lib/format"
+import { DAY, POLL_INTERVALS } from "~/lib/poll-intervals"
 
 import { updateSettings } from "../api/settings"
-
-/** Only *shorter* intervals risk an Apple ban; longer ones only make the latest fix older. */
-const INTERVALS = [
-  { minutes: 15, label: "Every 15 minutes" },
-  { minutes: 30, label: "Every 30 minutes (recommended)" },
-  { minutes: 60, label: "Every hour" },
-  { minutes: 120, label: "Every 2 hours" },
-  { minutes: 360, label: "Every 6 hours" },
-  { minutes: 720, label: "Every 12 hours" },
-  { minutes: 1440, label: "Once a day" },
-]
-
-const RECOMMENDED = 30
 
 type Props = {
   settings: Schemas["AppSettings"]
@@ -44,7 +32,6 @@ type Props = {
 export function PollingCard({ settings, status, now }: Props) {
   const { run, pending } = useMutation()
   const interval = settings.poll_interval_minutes
-  const risky = interval < RECOMMENDED
 
   return (
     <Card>
@@ -71,7 +58,7 @@ export function PollingCard({ settings, status, now }: Props) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {INTERVALS.map((i) => (
+              {POLL_INTERVALS.map((i) => (
                 <SelectItem key={i.minutes} value={String(i.minutes)}>
                   {i.label}
                 </SelectItem>
@@ -79,21 +66,26 @@ export function PollingCard({ settings, status, now }: Props) {
             </SelectContent>
           </Select>
           <FieldDescription>
-            Apple returns about seven days of reports every time, so your
-            history stays complete at any interval under a week. The interval
-            only decides how fresh the latest position is.
+            Apple keeps about seven days of reports and every check collects all
+            of them, so history stays complete at any interval under a week.
+            Every 30 minutes keeps the map current; once a day is enough if you
+            only need the history, and asks Apple far less often.
             {status.next_run_at && !status.running && (
               <> Next check {timeAgo(status.next_run_at, now)}.</>
             )}
           </FieldDescription>
         </Field>
-        {risky && (
-          <Alert variant="destructive">
-            <TriangleAlertIcon />
-            <AlertTitle>Checking this often raises the risk</AlertTitle>
+        {interval > DAY && (
+          <Alert>
+            <InfoIcon />
+            <AlertTitle>Less room for a missed check</AlertTitle>
             <AlertDescription>
-              Apple rate-limits and occasionally locks accounts that query the
-              Find My network too often. 30 minutes is the recommended floor.
+              A check that fails is tried again an hour later. But while the
+              server is off, or Apple wants you to sign in again, nothing is
+              collected, and reports more than a week old by the next check are
+              gone.
+              {interval >= 7 * DAY &&
+                " Checking weekly, the oldest reports can age out even when nothing goes wrong."}
             </AlertDescription>
           </Alert>
         )}

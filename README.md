@@ -75,8 +75,9 @@ Android and don't want to run a server, use OpenTagViewer. It's great.
 - **Near a place**: pick a point and a radius and see which items were there, when, and for how
   long
 - **Export** any range as CSV or GeoJSON
-- **Background polling** every 30 minutes by default (never more often than every 15), plus a
-  manual refresh
+- **Background polling** every 30 minutes by default, or as rarely as once a week if you only
+  need the history (say, as a backup to a car's own GPS), plus a manual refresh. A check that
+  fails is retried within the hour
 - **Guided Apple sign-in** in the browser: Apple ID, two-factor code, then the screen-lock
   passcode of one of your Apple devices to unlock the item keys from iCloud Keychain
 - **Add items later** without signing in again

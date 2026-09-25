@@ -734,7 +734,7 @@ export interface components {
     AppSettings: {
       /**
        * Poll Interval Minutes
-       * @description Minutes between polls. Below 30 raises the risk of an Apple account ban.
+       * @description Minutes between checks: 30 minutes to 7 days.
        * @default 30
        */
       poll_interval_minutes: number
