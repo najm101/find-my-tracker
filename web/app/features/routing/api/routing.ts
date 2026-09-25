@@ -1,5 +1,5 @@
 import { ApiError, api, unwrap, type Schemas } from "~/lib/api/client"
-import type { RoadRoutes } from "~/lib/road-routes"
+import type { PredictedRoutes } from "~/lib/predicted-routes"
 
 export function getRouting() {
   return unwrap(api.GET("/api/routing"))
@@ -39,7 +39,10 @@ export function deleteMapData() {
 
 export type RouteFilters = { from: Date; to: Date; beaconIds?: number[] }
 
-/** History snapped to roads. `pending` trips are still being matched: ask again shortly. */
+/**
+ * History's predicted routes. Trips still being matched come later: `progress` says how far along
+ * that is, and `getRoutesJob` fetches them.
+ */
 export function getRoutes(f: RouteFilters) {
   return unwrap(
     api.GET("/api/routing/routes", {
@@ -55,16 +58,36 @@ export function getRoutes(f: RouteFilters) {
 }
 
 /**
- * `getRoutes` for a loader that doesn't wait for it: history shows at once and the roads follow.
- * Matching can take a while. Nothing awaits this promise to catch a failure, so it never rejects:
- * a failure becomes an "unavailable" answer that says why.
+ * `getRoutes` for a loader that doesn't wait for it: history shows at once and the routes follow.
+ * Nothing awaits this promise to catch a failure, so it never rejects: a failure becomes an
+ * "unavailable" answer that says why.
  */
-export function startRoutes(f: RouteFilters): Promise<RoadRoutes> {
-  return getRoutes(f).catch((e: unknown): RoadRoutes => ({
+export function startRoutes(f: RouteFilters): Promise<PredictedRoutes> {
+  return getRoutes(f).catch((e: unknown): PredictedRoutes => ({
     state: "unavailable",
     message:
-      e instanceof ApiError ? e.message : "Couldn't load the road routes.",
+      e instanceof ApiError ? e.message : "Couldn't load the predicted routes.",
     trips: [],
-    pending: 0,
+    progress: null,
   }))
+}
+
+/**
+ * The trips a matching job has matched since the first `after`, and how far along it is. Null
+ * once the job is gone: nobody asked about it for a while (the page slept), so start again.
+ */
+export async function getRoutesJob(
+  job: string,
+  after: number
+): Promise<PredictedRoutes | null> {
+  try {
+    return await unwrap(
+      api.GET("/api/routing/routes/jobs/{job_id}", {
+        params: { path: { job_id: job }, query: { after } },
+      })
+    )
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null
+    throw e
+  }
 }

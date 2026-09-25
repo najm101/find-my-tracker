@@ -222,7 +222,7 @@
             "title": "Paired At"
           },
           "vehicle": {
-            "description": "Lives in a vehicle: road routes treat it as a car.",
+            "description": "Lives in a vehicle: predicted routes treat it as a car.",
             "title": "Vehicle",
             "type": "boolean"
           }
@@ -612,7 +612,7 @@
         "type": "object"
       },
       "Fallback": {
-        "description": "Why a trip has no road route; it is drawn as reported instead.",
+        "description": "Why a trip has no predicted route; it is drawn as reported instead.",
         "enum": [
           "no_roads",
           "error"
@@ -1239,7 +1239,7 @@
             "type": "string"
           },
           "off_route": {
-            "description": "Not on the likely route: probably a finder on a nearby road. Its position here is where the route was at that time.",
+            "description": "Not on the predicted route: probably a finder on a nearby road. Its position here is where the route was at that time.",
             "title": "Off Route",
             "type": "boolean"
           },
@@ -1259,6 +1259,37 @@
         "title": "RoutedReport",
         "type": "object"
       },
+      "RoutesProgress": {
+        "properties": {
+          "done": {
+            "description": "0..1: how much of the matching is done, counted in reports.",
+            "title": "Done",
+            "type": "number"
+          },
+          "job": {
+            "description": "Ask `/routing/routes/jobs/{job}` for the trips matched since.",
+            "title": "Job",
+            "type": "string"
+          },
+          "received": {
+            "description": "This job's trips sent so far: the next ask's `after`.",
+            "title": "Received",
+            "type": "integer"
+          },
+          "trips_left": {
+            "title": "Trips Left",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job",
+          "done",
+          "trips_left",
+          "received"
+        ],
+        "title": "RoutesProgress",
+        "type": "object"
+      },
       "RoutesResponse": {
         "properties": {
           "message": {
@@ -1272,10 +1303,16 @@
             ],
             "title": "Message"
           },
-          "pending": {
-            "description": "Trips still being matched; ask again shortly.",
-            "title": "Pending",
-            "type": "integer"
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoutesProgress"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Trips are still being matched: how far along it is, and where to ask next."
           },
           "state": {
             "$ref": "#/components/schemas/RoutesState"
@@ -1292,7 +1329,7 @@
           "state",
           "message",
           "trips",
-          "pending"
+          "progress"
         ],
         "title": "RoutesResponse",
         "type": "object"
@@ -1369,7 +1406,7 @@
             "$ref": "#/components/schemas/RoutingMode"
           },
           "ready": {
-            "description": "Road routes can be shown right now.",
+            "description": "Predicted routes can be shown right now.",
             "title": "Ready",
             "type": "boolean"
           }
@@ -1634,7 +1671,7 @@
                 "type": "null"
               }
             ],
-            "description": "Why there is no road route; draw the trip as reported instead."
+            "description": "Why there is no predicted route; draw the trip as reported instead."
           },
           "geometry": {
             "description": "[longitude, latitude] pairs.",
@@ -3052,7 +3089,7 @@
         ]
       },
       "put": {
-        "description": "Turn road routes off, use the built-in engine, or connect to a Valhalla server.",
+        "description": "Turn predicted routes off, use the built-in engine, or connect to a Valhalla server.",
         "operationId": "update_api_routing_put",
         "requestBody": {
           "content": {
@@ -3288,7 +3325,7 @@
     },
     "/api/routing/routes": {
       "get": {
-        "description": "History snapped to roads, trip by trip. `pending` trips are still being matched.",
+        "description": "History's predicted routes, trip by trip. Trips not matched yet are matched in the background:\n`progress` says how far along that is, and where to ask for the rest.",
         "operationId": "routes_api_routing_routes_get",
         "parameters": [
           {
@@ -3370,6 +3407,62 @@
           }
         },
         "summary": "Routes",
+        "tags": [
+          "routing"
+        ]
+      }
+    },
+    "/api/routing/routes/jobs/{job_id}": {
+      "get": {
+        "description": "A job's trips matched since the first `after`. Gone (404) once nobody asked for a while.",
+        "operationId": "job_routes_api_routing_routes_jobs__job_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "How many of its trips were received.",
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "How many of its trips were received.",
+              "minimum": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Job Routes",
         "tags": [
           "routing"
         ]

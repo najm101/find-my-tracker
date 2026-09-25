@@ -18,8 +18,8 @@ import { TrackerLayers } from "~/features/map/components/tracker-layers"
 import { startRoutes } from "~/features/routing/api/routing"
 import { RouteModeToggle } from "~/features/routing/components/route-mode-toggle"
 import { RoutesNotice } from "~/features/routing/components/routes-notice"
+import { usePredictedRoutes } from "~/features/routing/hooks/use-predicted-routes"
 import { usePendingSearchParams } from "~/hooks/use-pending-search-params"
-import { useSettled } from "~/hooks/use-settled"
 import { buildClock, buildTracks } from "~/lib/playback"
 import {
   getHidden,
@@ -43,9 +43,11 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const params = new URL(request.url).searchParams
   const mode = getMode(params)
   const range = rangeFromParams(params)
-  const roads = mode === "history" && getRouteMode(params) !== "reported"
-  // Road routes can take a while to match: the page shows without them and they follow.
-  const routes = roads ? startRoutes({ from: range.from, to: range.to }) : null
+  const predicted = mode === "history" && getRouteMode(params) !== "reported"
+  // Predicted routes can take a while to find: the page shows without them and they follow.
+  const routes = predicted
+    ? startRoutes({ from: range.from, to: range.to })
+    : null
   // History for every beacon at once; hiding is applied client-side so toggling is instant.
   const history =
     mode === "history"
@@ -65,20 +67,26 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const shown = history?.points.filter((p) => !hidden.has(p.beacon_id))
   const good = shown?.filter((p) => !p.noise)
   const routeMode = getRouteMode(params)
-  const { value: routes, loading: routesLoading } = useSettled(
+  const {
+    routes,
+    fresh,
+    loading: routesLoading,
+  } = usePredictedRoutes(
     loaderData.routes,
+    { from: range.from, to: range.to },
     rangeKey(range)
   )
-  // The path mode just picked shows at once, with a spinner until its roads are drawn.
+  // The path mode just picked shows at once: a spinner until its routes start coming, then how
+  // far along finding them is. The map shows each trip as it comes, and works meanwhile.
   const shownMode = getRouteMode(usePendingSearchParams())
-  const findingRoads =
-    shownMode !== "reported" && (routesLoading || shownMode !== routeMode)
-  const roads =
+  const predicting = routesLoading || !!routes?.progress
+  const settled = !routesLoading && shownMode === routeMode
+  const predicted =
     routeMode !== "reported" && routes?.state === "ok"
       ? routes.trips
       : undefined
-  // Playback follows the roads whenever they are on the map.
-  const tracks = buildTracks(good ?? [], history?.stays ?? [], roads)
+  // Playback follows the predicted routes whenever they are on the map, as far as they are found.
+  const tracks = buildTracks(good ?? [], history?.stays ?? [], predicted)
   const clock = buildClock(tracks)
   const player = usePlayback(clock, `${mode}|${rangeKey(range)}`)
   const playing = mode === "history" && player.open
@@ -91,7 +99,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         fitKey={`home|${mode}|${rangeKey(range)}`}
         backdrop={playing}
         pathMode={routeMode}
-        roads={roads}
+        predicted={predicted}
+        predicting={predicting}
+        drawIn={fresh}
         now={loadedAt}
       />
       {playing && (
@@ -130,17 +140,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           extra={
             <RouteModeToggle
               mode={shownMode}
-              busy={findingRoads}
+              busy={shownMode !== "reported" && (predicting || !settled)}
+              progress={settled ? (routes?.progress?.done ?? null) : null}
               onMode={(m) => setParams(withRouteMode(params, m))}
             />
           }
         />
         {mode === "history" && shownMode !== "reported" && (
-          <RoutesNotice
-            routes={routes}
-            loading={findingRoads}
-            className="max-w-sm bg-background/95"
-          />
+          <RoutesNotice routes={routes} className="max-w-sm bg-background/95" />
         )}
       </div>
       {!located && (

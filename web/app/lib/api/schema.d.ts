@@ -470,7 +470,7 @@ export interface paths {
     get: operations["get_status_api_routing_get"]
     /**
      * Update
-     * @description Turn road routes off, use the built-in engine, or connect to a Valhalla server.
+     * @description Turn predicted routes off, use the built-in engine, or connect to a Valhalla server.
      */
     put: operations["update_api_routing_put"]
     post?: never
@@ -600,9 +600,30 @@ export interface paths {
     }
     /**
      * Routes
-     * @description History snapped to roads, trip by trip. `pending` trips are still being matched.
+     * @description History's predicted routes, trip by trip. Trips not matched yet are matched in the background:
+     *     `progress` says how far along that is, and where to ask for the rest.
      */
     get: operations["routes_api_routing_routes_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/api/routing/routes/jobs/{job_id}": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Job Routes
+     * @description A job's trips matched since the first `after`. Gone (404) once nobody asked for a while.
+     */
+    get: operations["job_routes_api_routing_routes_jobs__job_id__get"]
     put?: never
     post?: never
     delete?: never
@@ -762,7 +783,7 @@ export interface components {
       paired_at: string | null
       /**
        * Vehicle
-       * @description Lives in a vehicle: road routes treat it as a car.
+       * @description Lives in a vehicle: predicted routes treat it as a car.
        */
       vehicle: boolean
     }
@@ -874,7 +895,7 @@ export interface components {
     }
     /**
      * Fallback
-     * @description Why a trip has no road route; it is drawn as reported instead.
+     * @description Why a trip has no predicted route; it is drawn as reported instead.
      * @enum {string}
      */
     Fallback: "no_roads" | "error"
@@ -1136,7 +1157,7 @@ export interface components {
       observed_at: string
       /**
        * Off Route
-       * @description Not on the likely route: probably a finder on a nearby road. Its position here is where the route was at that time.
+       * @description Not on the predicted route: probably a finder on a nearby road. Its position here is where the route was at that time.
        */
       off_route: boolean
       /**
@@ -1145,15 +1166,32 @@ export interface components {
        */
       offset_m: number
     }
+    /** RoutesProgress */
+    RoutesProgress: {
+      /**
+       * Done
+       * @description 0..1: how much of the matching is done, counted in reports.
+       */
+      done: number
+      /**
+       * Job
+       * @description Ask `/routing/routes/jobs/{job}` for the trips matched since.
+       */
+      job: string
+      /**
+       * Received
+       * @description This job's trips sent so far: the next ask's `after`.
+       */
+      received: number
+      /** Trips Left */
+      trips_left: number
+    }
     /** RoutesResponse */
     RoutesResponse: {
       /** Message */
       message: string | null
-      /**
-       * Pending
-       * @description Trips still being matched; ask again shortly.
-       */
-      pending: number
+      /** @description Trips are still being matched: how far along it is, and where to ask next. */
+      progress: components["schemas"]["RoutesProgress"] | null
       state: components["schemas"]["RoutesState"]
       /** Trips */
       trips: components["schemas"]["TripRoute"][]
@@ -1189,7 +1227,7 @@ export interface components {
       mode: components["schemas"]["RoutingMode"]
       /**
        * Ready
-       * @description Road routes can be shown right now.
+       * @description Predicted routes can be shown right now.
        */
       ready: boolean
     }
@@ -1287,7 +1325,7 @@ export interface components {
        */
       broken_after: number[]
       costing: components["schemas"]["Costing"]
-      /** @description Why there is no road route; draw the trip as reported instead. */
+      /** @description Why there is no predicted route; draw the trip as reported instead. */
       fallback: components["schemas"]["Fallback"] | null
       /**
        * Geometry
@@ -2395,6 +2433,40 @@ export interface operations {
       }
       header?: never
       path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["RoutesResponse"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  job_routes_api_routing_routes_jobs__job_id__get: {
+    parameters: {
+      query?: {
+        /** @description How many of its trips were received. */
+        after?: number
+      }
+      header?: never
+      path: {
+        job_id: string
+      }
       cookie?: never
     }
     requestBody?: never

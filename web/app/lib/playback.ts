@@ -9,7 +9,7 @@
 
 import type { Schemas } from "~/lib/api/client"
 import { type LngLat, measure, pointAlong, slice, upTo } from "~/lib/geometry"
-import type { RoadTrip } from "~/lib/road-routes"
+import type { PredictedTrip } from "~/lib/predicted-routes"
 
 type Point = Schemas["LocationPoint"]
 type Stay = Schemas["Stay"]
@@ -42,21 +42,21 @@ export type Track = {
   /** Per segment (report i to i + 1): spent inside one stay. */
   still: boolean[]
   /**
-   * Per segment: the way along the roads from report i to i + 1, when a road route says so;
+   * Per segment: the way along the roads from report i to i + 1, when a predicted route says so;
    * null for a straight line.
    */
   legs: (LngLat[] | null)[]
 }
 
 /**
- * One track per beacon, from the good reports only (noisy ones are skipped). With road `routes`,
+ * One track per beacon, from the good reports only (noisy ones are skipped). With predicted `routes`,
  * the marker goes along them: each routed report sits on its route, and moves along the roads to
  * the next one.
  */
 export function buildTracks(
   points: Point[],
   stays: Stay[],
-  routes: RoadTrip[] = []
+  routes: PredictedTrip[] = []
 ): Track[] {
   const byBeacon = new Map<number, Point[]>()
   for (const p of points) {
@@ -117,7 +117,7 @@ export function buildTracks(
 }
 
 /** Put the track's reports on a trip's route, and the legs between them along it. */
-function followRoute(track: Track, route: RoadTrip) {
+function followRoute(track: Track, route: PredictedTrip) {
   if (route.fallback || route.geometry.length < 2) return
   const line = route.geometry as LngLat[]
   const along = measure(line)

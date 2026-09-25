@@ -1,4 +1,7 @@
-"""Process-wide routing state: the built-in engine, the region catalog, and external servers."""
+"""
+Process-wide routing state: the built-in engine, the region catalog, external servers, and the
+trips being matched.
+"""
 
 from __future__ import annotations
 
@@ -9,6 +12,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from find_my_tracker.features.routing.jobs import Matcher
 from find_my_tracker.integrations.valhalla.builtin import BuiltinEngine
 from find_my_tracker.integrations.valhalla.client import ValhallaClient
 from find_my_tracker.integrations.valhalla.regions import RegionCatalog
@@ -26,12 +30,14 @@ class RoutingRuntime:
         env_url: str | None,
         builtin: BuiltinEngine,
         catalog: RegionCatalog,
+        matcher: Matcher,
         connect: Callable[[str], Valhalla] = ValhallaClient,
     ) -> None:
         #: Set by the operator (ROUTING_URL): fixed, Settings shows it and cannot change it.
         self.env_url = env_url.strip() if env_url and env_url.strip() else None
         self.builtin = builtin
         self.catalog = catalog
+        self.matcher = matcher
         self._connect = connect
         self._clients: dict[str, Valhalla] = {}
         self._status: dict[str, tuple[float, EngineStatus | RoutingUnavailable]] = {}
@@ -78,6 +84,7 @@ class RoutingRuntime:
             self._catalog_task.cancel()
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await self._catalog_task
+        await self.matcher.close()
         await self.builtin.stop()
         for client in self._clients.values():
             await client.close()

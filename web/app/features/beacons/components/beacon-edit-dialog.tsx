@@ -147,8 +147,8 @@ function EditForm({ beacon, onDone }: { beacon: Beacon; onDone: () => void }) {
           <FieldContent>
             <FieldLabel htmlFor="beacon-vehicle">Lives in a vehicle</FieldLabel>
             <FieldDescription>
-              For an item left in a car, bike or van. Road routes then follow
-              roads a car can use, however slowly it seemed to move.
+              For an item left in a car, bike or van. Its predicted routes then
+              follow roads a car can use, however slowly it seemed to move.
             </FieldDescription>
           </FieldContent>
           <Switch

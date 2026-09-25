@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest"
 
 import type { Schemas } from "~/lib/api/client"
 
-import { RoadRoutesCard } from "./road-routes-card"
+import { PredictedRoutesCard } from "./predicted-routes-card"
+import { RouteModeToggle } from "./route-mode-toggle"
 import { RoutesNotice } from "./routes-notice"
 
 type Status = Schemas["RoutingStatus"]
@@ -22,7 +23,7 @@ const off: Status = {
   mode: "off",
   configured_by_env: false,
   ready: false,
-  message: "Road routes are off.",
+  message: "Predicted routes are off.",
   builtin: null,
   external: null,
   missing_regions: [],
@@ -62,9 +63,9 @@ const builtin = (patch: Partial<Schemas["BuiltinOut"]> = {}): Status => ({
   },
 })
 
-describe("RoadRoutesCard", () => {
+describe("PredictedRoutesCard", () => {
   it("offers the three ways when nothing is set up", () => {
-    renderRouted(<RoadRoutesCard routing={off} now={NOW} />)
+    renderRouted(<PredictedRoutesCard routing={off} now={NOW} />)
     expect(screen.getByRole("radio", { name: /off/i })).toBeChecked()
     expect(screen.getByRole("radio", { name: /built in/i })).toBeInTheDocument()
     expect(
@@ -73,7 +74,7 @@ describe("RoadRoutesCard", () => {
   })
 
   it("shows the built-in engine ready, with its regions", () => {
-    renderRouted(<RoadRoutesCard routing={builtin()} now={NOW} />)
+    renderRouted(<PredictedRoutesCard routing={builtin()} now={NOW} />)
     expect(screen.getByText("Ready")).toBeInTheDocument()
     expect(
       screen.getByText(/road data prepared 1 hour ago/i)
@@ -97,7 +98,7 @@ describe("RoadRoutesCard", () => {
         region({ status: "downloading", progress: 0.45, in_use: false }),
       ],
     })
-    renderRouted(<RoadRoutesCard routing={status} now={NOW} />)
+    renderRouted(<PredictedRoutesCard routing={status} now={NOW} />)
     expect(screen.getByText(/downloading egypt · 45%/i)).toBeInTheDocument()
     expect(screen.getByRole("progressbar")).toBeInTheDocument()
   })
@@ -111,7 +112,7 @@ describe("RoadRoutesCard", () => {
     status.missing_regions = [
       { id: "libya", name: "Libya", beacons: ["Suzuki", "Hyundai"] },
     ]
-    renderRouted(<RoadRoutesCard routing={status} now={NOW} />)
+    renderRouted(<PredictedRoutesCard routing={status} now={NOW} />)
     expect(
       screen.getByText("Too big to download automatically (1.9 GB)")
     ).toBeInTheDocument()
@@ -135,7 +136,7 @@ describe("RoadRoutesCard", () => {
         error: null,
       },
     }
-    renderRouted(<RoadRoutesCard routing={status} now={NOW} />)
+    renderRouted(<PredictedRoutesCard routing={status} now={NOW} />)
     expect(screen.getByText("http://valhalla:8002")).toBeInTheDocument()
     expect(screen.getByText("Connected")).toBeInTheDocument()
     expect(
@@ -150,24 +151,26 @@ describe("RoutesNotice", () => {
     state: "ok" as const,
     message: null,
     trips: [],
-    pending: 0,
+    progress: null,
     ...patch,
   })
 
-  it("points to Settings and the guide when road routes aren't set up", () => {
+  it("points to Settings and the guide when predicted routes aren't set up", () => {
     renderRouted(
       <RoutesNotice
-        routes={routes({ state: "off", message: "Road routes are off." })}
+        routes={routes({ state: "off", message: "Predicted routes are off." })}
       />
     )
-    expect(screen.getByText("Road routes aren't set up")).toBeInTheDocument()
+    expect(
+      screen.getByText("Predicted routes aren't set up")
+    ).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Set up" })).toHaveAttribute(
       "href",
-      "/settings#road-routes"
+      "/settings#predicted-routes"
     )
     expect(screen.getByRole("link", { name: /guide/i })).toHaveAttribute(
       "href",
-      expect.stringContaining("#road-routes")
+      expect.stringContaining("#predicted-routes")
     )
   })
 
@@ -185,20 +188,36 @@ describe("RoutesNotice", () => {
     ).toBeInTheDocument()
   })
 
-  it("says when trips are still being matched", () => {
-    renderRouted(<RoutesNotice routes={routes({ pending: 3 })} />)
-    expect(
-      screen.getByText(/finding the roads for 3 more trips/i)
-    ).toBeInTheDocument()
+  it("says nothing while matching, or when all is well", () => {
+    const matching = routes({
+      progress: { job: "j", done: 0.4, trips_left: 3, received: 1 },
+    })
+    const quiet = renderRouted(<RoutesNotice routes={matching} />)
+    expect(quiet.container).toBeEmptyDOMElement()
+    const well = renderRouted(<RoutesNotice routes={routes({})} />)
+    expect(well.container).toBeEmptyDOMElement()
+  })
+})
+
+describe("RouteModeToggle", () => {
+  const noop = () => {}
+
+  it("fills the chosen mode's button as the routes are found", () => {
+    render(<RouteModeToggle mode="predicted" progress={0.42} onMode={noop} />)
+    const button = screen.getByRole("radio", { name: /predicted/i })
+    expect(button).toHaveAccessibleName("Predicted, 42% found")
+    expect(screen.getByTestId("route-progress")).toHaveStyle({ width: "42%" })
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-busy", "true")
   })
 
-  it("says the roads are being found before the first answer", () => {
-    renderRouted(<RoutesNotice routes={undefined} loading />)
-    expect(screen.getByText("Finding the roads…")).toBeInTheDocument()
-  })
-
-  it("says nothing when all is well", () => {
-    const { container } = renderRouted(<RoutesNotice routes={routes({})} />)
-    expect(container).toBeEmptyDOMElement()
+  it("spins until the progress is known, and is quiet when done", () => {
+    const { rerender } = render(
+      <RouteModeToggle mode="both" busy onMode={noop} />
+    )
+    expect(screen.queryByTestId("route-progress")).toBeNull()
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-busy", "true")
+    rerender(<RouteModeToggle mode="both" onMode={noop} />)
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("aria-busy", "false")
+    expect(screen.getByRole("radio", { name: "Both" })).toBeInTheDocument()
   })
 })

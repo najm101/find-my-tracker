@@ -40,8 +40,8 @@ import {
 import { startRoutes } from "~/features/routing/api/routing"
 import { RouteModeToggle } from "~/features/routing/components/route-mode-toggle"
 import { RoutesNotice } from "~/features/routing/components/routes-notice"
+import { usePredictedRoutes } from "~/features/routing/hooks/use-predicted-routes"
 import { usePendingSearchParams } from "~/hooks/use-pending-search-params"
-import { useSettled } from "~/hooks/use-settled"
 import type { Schemas } from "~/lib/api/client"
 import { BEACON_KINDS } from "~/lib/beacon-kind"
 import { buildClock, buildTracks, reportIndexAt } from "~/lib/playback"
@@ -68,7 +68,7 @@ export async function clientLoader({
   const range = rangeFromParams(search)
   const beaconId = Number(params.beaconId)
   const filters = { from: range.from, to: range.to, beaconIds: [beaconId] }
-  // Road routes can take a while to match: the page shows without them and they follow.
+  // Predicted routes can take a while to find: the page shows without them and they follow.
   const routes =
     getRouteMode(search) === "reported" ? null : startRoutes(filters)
   const history = await getLocations(filters)
@@ -84,21 +84,27 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
   const showNoise = getShowNoise(params)
   const beacon = beacons.find((b) => b.id === beaconId)
   const routeMode = getRouteMode(params)
-  const { value: routes, loading: routesLoading } = useSettled(
+  const {
+    routes,
+    fresh,
+    loading: routesLoading,
+  } = usePredictedRoutes(
     loaderData.routes,
+    { from: range.from, to: range.to, beaconIds: [beaconId] },
     `${beaconId}|${rangeKey(range)}`
   )
-  // The path mode just picked shows at once, with a spinner until its roads are drawn.
+  // The path mode just picked shows at once: a spinner until its routes start coming, then how
+  // far along finding them is. The map shows each trip as it comes, and works meanwhile.
   const shownMode = getRouteMode(usePendingSearchParams())
-  const findingRoads =
-    shownMode !== "reported" && (routesLoading || shownMode !== routeMode)
-  const roads =
+  const predicting = routesLoading || !!routes?.progress
+  const settled = !routesLoading && shownMode === routeMode
+  const predicted =
     routeMode !== "reported" && routes?.state === "ok"
       ? routes.trips
       : undefined
   // Playback always uses the good reports, and the stays found among them; it follows the
-  // roads whenever they are on the map.
-  const tracks = buildTracks(history.points, history.stays, roads)
+  // predicted routes whenever they are on the map, as far as they are found.
+  const tracks = buildTracks(history.points, history.stays, predicted)
   const clock = buildClock(tracks)
   const player = usePlayback(clock, `${beaconId}|${rangeKey(range)}`)
 
@@ -130,8 +136,11 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
   const stays = showNoise ? [] : history.stays
   const stayIndex = indexStays(stays)
   const rowKey = (p: Schemas["LocationPoint"]) => rowKeyFor(stayIndex, p)
-  const offRoute = roads
-    ? roads.reduce((n, t) => n + t.reports.filter((r) => r.off_route).length, 0)
+  const offRoute = predicted
+    ? predicted.reduce(
+        (n, t) => n + t.reports.filter((r) => r.off_route).length,
+        0
+      )
     : 0
   // While playing, the timeline follows along: the last report passed is its selected row.
   const track = tracks[0]
@@ -152,7 +161,9 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
         focus={player.open ? null : focus}
         backdrop={player.open}
         pathMode={routeMode}
-        roads={roads}
+        predicted={predicted}
+        predicting={predicting}
+        drawIn={fresh}
         onPick={(p) =>
           player.open
             ? player.seek(Date.parse(p.observed_at))
@@ -255,11 +266,9 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
                 onPressedChange={(on) => setParams(withShowNoise(params, on))}
               />
               {offRoute > 0 &&
-                ` · ${offRoute.toLocaleString()} off the likely route (hollow dots)`}
+                ` · ${offRoute.toLocaleString()} off the predicted route (hollow dots)`}
             </p>
-            {shownMode !== "reported" && (
-              <RoutesNotice routes={routes} loading={findingRoads} />
-            )}
+            {shownMode !== "reported" && <RoutesNotice routes={routes} />}
             <DayTimeline
               points={points}
               stays={stays}
@@ -274,7 +283,8 @@ export default function BeaconHistory({ loaderData }: Route.ComponentProps) {
           <CardFooter className="gap-2">
             <RouteModeToggle
               mode={shownMode}
-              busy={findingRoads}
+              busy={shownMode !== "reported" && (predicting || !settled)}
+              progress={settled ? (routes?.progress?.done ?? null) : null}
               onMode={(m) => setParams(withRouteMode(params, m))}
             />
             <Button

@@ -89,10 +89,10 @@ const MODES: { value: Mode; title: string; description: string }[] = [
 ]
 
 /**
- * Road routes: snapping history to the roads it most likely took. Off, done by this server on map
- * data it downloads, or by a Valhalla server elsewhere.
+ * Predicted routes: snapping history to the roads it most likely took. Off, done by this server on
+ * map data it downloads, or by a Valhalla server elsewhere.
  */
-export function RoadRoutesCard({
+export function PredictedRoutesCard({
   routing,
   now,
 }: {
@@ -103,9 +103,9 @@ export function RoadRoutesCard({
   useRefreshWhile(busy)
 
   return (
-    <Card id="road-routes">
+    <Card id="predicted-routes">
       <CardHeader>
-        <CardTitle>Road routes</CardTitle>
+        <CardTitle>Predicted routes</CardTitle>
         <CardDescription>
           Show the roads an item most likely took between its reports, not just
           straight lines. It is a best guess: reports are where a passing phone
@@ -150,7 +150,9 @@ function ModeChoice({ routing }: { routing: Status }) {
     if (mode !== "external")
       void run(
         () => updateRouting({ mode }),
-        mode === "off" ? "Road routes are off." : "Using the built-in engine."
+        mode === "off"
+          ? "Predicted routes are off."
+          : "Using the built-in engine."
       )
   }
 
@@ -474,7 +476,7 @@ function DeleteMapData({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete all map data?</AlertDialogTitle>
           <AlertDialogDescription>
-            Every downloaded region and the road data built from them. Road
+            Every downloaded region and the road data built from them. Predicted
             routes stop until map data is downloaded again. Your items&apos;
             history is not touched.
           </AlertDialogDescription>

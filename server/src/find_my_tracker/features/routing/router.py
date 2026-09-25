@@ -33,7 +33,7 @@ async def get_status(_: AdminDep, session: SessionDep, container: ContainerDep) 
 async def update(
     body: RoutingUpdate, _: AdminDep, session: SessionDep, container: ContainerDep
 ) -> RoutingStatus:
-    """Turn road routes off, use the built-in engine, or connect to a Valhalla server."""
+    """Turn predicted routes off, use the built-in engine, or connect to a Valhalla server."""
     return await RoutingService(session, container).update(body)
 
 
@@ -89,9 +89,24 @@ async def routes(
     start: Annotated[datetime | None, Query(alias="from")] = None,
     end: Annotated[datetime | None, Query(alias="to")] = None,
 ) -> RoutesResponse:
-    """History snapped to roads, trip by trip. `pending` trips are still being matched."""
+    """
+    History's predicted routes, trip by trip. Trips not matched yet are matched in the background:
+    `progress` says how far along that is, and where to ask for the rest.
+    """
     end = end or container.clock.now()
     start = start or end - timedelta(hours=DEFAULT_SPAN_HOURS)
     if start > end:
         raise DomainError("`from` must be before `to`.", code="invalid_range")
     return await RoutingService(session, container).routes(TimeRange.of(start, end), beacon_id)
+
+
+@router.get("/routes/jobs/{job_id}")
+async def job_routes(
+    job_id: str,
+    _: AdminDep,
+    session: SessionDep,
+    container: ContainerDep,
+    after: Annotated[int, Query(ge=0, description="How many of its trips were received.")] = 0,
+) -> RoutesResponse:
+    """A job's trips matched since the first `after`. Gone (404) once nobody asked for a while."""
+    return RoutingService(session, container).job_routes(job_id, after)

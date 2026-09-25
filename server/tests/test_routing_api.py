@@ -1,4 +1,4 @@
-"""Road routes through the API: choosing an engine, map regions, matched history, vehicles."""
+"""Predicted routes through the API: choosing an engine, map regions, matched history, vehicles."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 
 from find_my_tracker.core.config import Settings
 from find_my_tracker.core.container import Container
+from find_my_tracker.features.routing import service
 from find_my_tracker.integrations.valhalla.fake import FakeToolchain, FakeValhalla
 from find_my_tracker.integrations.valhalla.types import MatchFailed
 from find_my_tracker.main import create_app
@@ -54,7 +55,7 @@ def test_an_external_server(
     assert status["external"]["url"] == "http://valhalla:8002"
 
     routes = admin.get("/api/routing/routes", params={"beacon_id": ids["Keys"]}).json()
-    assert routes["state"] == "ok" and routes["pending"] == 0
+    assert routes["state"] == "ok" and routes["progress"] is None
     (trip,) = routes["trips"]
     assert trip["beacon_id"] == ids["Keys"] and trip["costing"] == "pedestrian"
     assert trip["fallback"] is None and len(trip["geometry"]) >= 2
@@ -66,6 +67,48 @@ def test_an_external_server(
     asked = len(valhalla.requests)
     admin.get("/api/routing/routes", params={"beacon_id": ids["Keys"]})
     assert len(valhalla.requests) == asked
+
+
+def test_slow_matching_is_followed_up(
+    admin: TestClient,
+    container: Container,
+    valhalla: FakeValhalla,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ids = setup_history(admin, container)
+    admin.put("/api/routing", json={"mode": "external", "url": "http://valhalla:8002"})
+    monkeypatch.setattr(service, "FIRST_WAIT_S", 0)
+    valhalla.delay = 0.2
+
+    first = admin.get("/api/routing/routes", params={"beacon_id": ids["Keys"]}).json()
+    assert first["state"] == "ok" and first["trips"] == []
+    progress = first["progress"]
+    assert progress["done"] == 0 and progress["trips_left"] == 1 and progress["received"] == 0
+
+    # The page asks the job what's new, until it's done.
+    trips = []
+    deadline = time.monotonic() + 5
+    while progress:
+        assert time.monotonic() < deadline, progress
+        time.sleep(0.05)
+        res = admin.get(
+            f"/api/routing/routes/jobs/{progress['job']}",
+            params={"after": progress["received"]},
+        ).json()
+        assert res["state"] == "ok"
+        trips += res["trips"]
+        if res["progress"]:
+            assert res["progress"]["done"] >= progress["done"]
+        progress = res["progress"]
+    (trip,) = trips
+    assert trip["beacon_id"] == ids["Keys"] and trip["fallback"] is None
+
+    # It was cached as soon as it was matched.
+    again = admin.get("/api/routing/routes", params={"beacon_id": ids["Keys"]}).json()
+    assert again["progress"] is None and again["trips"] == [trip]
+
+    gone = admin.get("/api/routing/routes/jobs/nope")
+    assert gone.status_code == 404 and gone.json()["error"]["code"] == "routes_job_gone"
 
 
 def test_a_vehicle_is_matched_as_a_car(

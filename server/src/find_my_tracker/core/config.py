@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     # who finds the address.
     expose_api_docs: bool = False
 
-    # ---- road routes (see README: "Road routes") ----
+    # ---- predicted routes (see README: "Predicted routes") ----
     # A Valhalla server to snap history to roads, e.g. http://valhalla:8002 for a container next to
     # this one. Set here, it is fixed: Settings shows it and cannot change it. Unset: chosen in
     # Settings, where the built-in engine is the other option.

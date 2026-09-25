@@ -27,6 +27,8 @@ class FakeValhalla:
         self.down = False
         #: Raise this from every match (e.g. MatchFailed with a no-roads code).
         self.fail: MatchFailed | None = None
+        #: Seconds each match takes.
+        self.delay = 0.0
         self.requests: list[dict[str, Any]] = []
 
     async def status(self) -> EngineStatus:
@@ -38,6 +40,8 @@ class FakeValhalla:
     async def trace_attributes(self, request: dict[str, Any]) -> dict[str, Any]:
         await self.status()
         self.requests.append(request)
+        if self.delay:
+            await asyncio.sleep(self.delay)
         if self.fail:
             raise self.fail
         points = [(p["lat"], p["lon"]) for p in request["shape"]]

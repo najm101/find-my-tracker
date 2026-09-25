@@ -5,7 +5,7 @@ type Region = Schemas["RegionOut"]
 
 /** Where the setup guide lives: running the built-in engine, or a Valhalla container. */
 export const ROUTING_GUIDE =
-  "https://github.com/najm101/find-my-tracker#road-routes"
+  "https://github.com/najm101/find-my-tracker#predicted-routes"
 
 /** One line on where a map region is: downloading, waiting, ready, or why not. */
 export function regionStatus(region: Region): string {

@@ -5,6 +5,7 @@ import { MapPopup, useMap } from "~/components/ui/map"
 import type { Schemas } from "~/lib/api/client"
 import { distance, duration, time } from "~/lib/format"
 import { GAP_MS } from "~/lib/playback"
+import { reportKey } from "~/lib/predicted-routes"
 
 type Point = Schemas["LocationPoint"]
 
@@ -28,6 +29,11 @@ type Props = {
   selectedId?: number | null
   /** Draw every path dimmed, as the backdrop to a playback. */
   faded?: boolean
+  /**
+   * `reportKey`s of reports a predicted route is drawn through: the segments between two of them
+   * are left out, the route shows that way.
+   */
+  covered?: ReadonlySet<string>
   /** Called when a segment is clicked, besides showing its popup. */
   onPick?: (segment: Segment) => void
 }
@@ -41,6 +47,7 @@ export function PathLayer({
   colors,
   selectedId,
   faded = false,
+  covered,
   onPick,
 }: Props) {
   const { map, isLoaded } = useMap()
@@ -62,6 +69,11 @@ export function PathLayer({
       const from = points[i - 1]
       const to = points[i]
       if (from.beacon_id !== to.beacon_id) continue
+      if (
+        covered?.has(reportKey(from.beacon_id, from.observed_at)) &&
+        covered.has(reportKey(to.beacon_id, to.observed_at))
+      )
+        continue
       out.push({
         from,
         to,
@@ -73,7 +85,7 @@ export function PathLayer({
       })
     }
     return out
-  }, [points])
+  }, [points, covered])
 
   const data = useMemo<GeoJSON.FeatureCollection>(
     () => ({

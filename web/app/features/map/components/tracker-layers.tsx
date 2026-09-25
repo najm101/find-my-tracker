@@ -2,13 +2,17 @@ import { useEffect, useMemo } from "react"
 
 import { MapMarker, MarkerContent, useMap } from "~/components/ui/map"
 import type { Schemas } from "~/lib/api/client"
-import { type RoadTrip, offRouteKeys } from "~/lib/road-routes"
+import {
+  type PredictedTrip,
+  coveredKeys,
+  offRouteKeys,
+} from "~/lib/predicted-routes"
 import type { RouteMode } from "~/lib/search-params"
 
 import { BeaconMarker } from "./beacon-marker"
 import { FitToData, moveTo } from "./fit-to-data"
 import { PathLayer, type Segment } from "./path-layer"
-import { RoadRouteLayer } from "./road-route-layer"
+import { PredictedRouteLayer } from "./predicted-route-layer"
 import { SightingsLayer } from "./sightings-layer"
 
 type Beacon = Schemas["BeaconOut"]
@@ -46,10 +50,17 @@ type Props = {
    * playback draws its own moving ones.
    */
   backdrop?: boolean
-  /** Draw the path as reported, along the roads (`roads`), or both. */
+  /** Draw the path as reported, as its predicted route (`predicted`), or both. */
   pathMode?: RouteMode
-  /** History snapped to roads, for `pathMode` "road" and "both". */
-  roads?: RoadTrip[]
+  /** History's predicted routes, for `pathMode` "predicted" and "both". */
+  predicted?: PredictedTrip[]
+  /**
+   * Predicted routes are still being found. Meanwhile "predicted" shows the reported path faintly
+   * wherever there is no predicted route yet, and the map works as usual.
+   */
+  predicting?: boolean
+  /** `tripKey`s of predicted routes to draw in as they arrive. */
+  drawIn?: ReadonlySet<string>
   /** Called when a history dot is clicked. */
   onPick?: (point: Point) => void
   /** Called when a path segment is clicked (its popup shows either way). */
@@ -68,7 +79,9 @@ export function TrackerLayers({
   focus,
   backdrop = false,
   pathMode = "reported",
-  roads,
+  predicted,
+  predicting = false,
+  drawIn,
   onPick,
   onPickSegment,
   now,
@@ -99,6 +112,12 @@ export function TrackerLayers({
     [visiblePoints]
   )
 
+  // The predicted routes on the map, if the path mode shows them.
+  const routes =
+    pathMode !== "reported" && predicted
+      ? predicted.filter((t) => visibleIds.has(t.beacon_id))
+      : undefined
+
   const frame = useMemo<[number, number][]>(() => {
     if (points) return goodPoints.map((p) => [p.longitude, p.latitude])
     return beacons.flatMap((b) =>
@@ -110,30 +129,38 @@ export function TrackerLayers({
     <>
       {points && (
         <>
-          {pathMode !== "road" && (
+          {(pathMode !== "predicted" || predicting) && (
             <PathLayer
               points={goodPoints}
               colors={colors}
               selectedId={selectedId}
-              faded={backdrop || (pathMode === "both" && !!roads)}
+              faded={
+                backdrop ||
+                pathMode === "predicted" ||
+                (pathMode === "both" && !!routes)
+              }
+              covered={
+                pathMode === "predicted" && routes
+                  ? coveredKeys(routes)
+                  : undefined
+              }
               onPick={onPickSegment}
             />
           )}
-          {pathMode !== "reported" && roads && (
-            <RoadRouteLayer
-              trips={roads.filter((t) => visibleIds.has(t.beacon_id))}
+          {routes && (
+            <PredictedRouteLayer
+              trips={routes}
               colors={colors}
               selectedId={selectedId}
               faded={backdrop}
+              drawIn={drawIn}
             />
           )}
           <SightingsLayer
             points={visiblePoints}
             colors={colors}
             faded={backdrop}
-            offRoute={
-              pathMode !== "reported" && roads ? offRouteKeys(roads) : undefined
-            }
+            offRoute={routes ? offRouteKeys(routes) : undefined}
             onPick={onPick}
           />
         </>

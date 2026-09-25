@@ -58,7 +58,7 @@ class RoutingStatus(BaseModel):
     configured_by_env: bool = Field(
         description="ROUTING_URL is set: the server's operator chose it, Settings cannot change it."
     )
-    ready: bool = Field(description="Road routes can be shown right now.")
+    ready: bool = Field(description="Predicted routes can be shown right now.")
     message: str | None = Field(description="What is missing, when not ready. For people.")
     builtin: BuiltinOut | None
     external: ExternalOut | None
@@ -92,7 +92,7 @@ class RoutedReport(BaseModel):
     offset_m: float = Field(description="Metres along the trip's route.")
     off_route: bool = Field(
         description=(
-            "Not on the likely route: probably a finder on a nearby road. Its position here is "
+            "Not on the predicted route: probably a finder on a nearby road. Its position here is "
             "where the route was at that time."
         )
     )
@@ -107,7 +107,7 @@ class TripRoute(BaseModel):
         description="Indices into `reports`: the way from that report to the next is not known."
     )
     fallback: Fallback | None = Field(
-        description="Why there is no road route; draw the trip as reported instead."
+        description="Why there is no predicted route; draw the trip as reported instead."
     )
 
 
@@ -117,8 +117,17 @@ class RoutesState(StrEnum):
     UNAVAILABLE = "unavailable"
 
 
+class RoutesProgress(BaseModel):
+    job: str = Field(description="Ask `/routing/routes/jobs/{job}` for the trips matched since.")
+    done: float = Field(description="0..1: how much of the matching is done, counted in reports.")
+    trips_left: int
+    received: int = Field(description="This job's trips sent so far: the next ask's `after`.")
+
+
 class RoutesResponse(BaseModel):
     state: RoutesState
     message: str | None
     trips: list[TripRoute]
-    pending: int = Field(description="Trips still being matched; ask again shortly.")
+    progress: RoutesProgress | None = Field(
+        description="Trips are still being matched: how far along it is, and where to ask next."
+    )

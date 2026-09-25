@@ -264,7 +264,7 @@ describe("the marker", () => {
   })
 })
 
-describe("along a road route", () => {
+describe("along a predicted route", () => {
   // Two reports, and a route between them that goes round a corner (east, then north).
   const reports = [report(0, 0), report(10, 0.01)]
   const route: Schemas["TripRoute"] = {

@@ -26,6 +26,7 @@ from find_my_tracker.features.auth.service import AdminAuth, AuthService, LoginR
 from find_my_tracker.features.beacons.router import router as beacons_router
 from find_my_tracker.features.health.router import router as health_router
 from find_my_tracker.features.locations.router import router as locations_router
+from find_my_tracker.features.routing.jobs import Matcher, cache_in
 from find_my_tracker.features.routing.router import router as routing_router
 from find_my_tracker.features.routing.runtime import RoutingRuntime
 from find_my_tracker.features.routing.schemas import RoutingMode
@@ -79,6 +80,7 @@ def build_container(
         env_url=settings.routing_url,
         builtin=BuiltinEngine(settings.routing_dir, tools),
         catalog=routing_catalog or RegionCatalog(settings.routing_dir / "geofabrik-index.json"),
+        matcher=Matcher(cache_in(db, clock)),
         **({"connect": routing_connect} if routing_connect else {}),
     )
     container = Container(

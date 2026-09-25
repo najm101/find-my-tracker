@@ -71,7 +71,8 @@ describe("route mode", () => {
   it("defaults to the reported path and ignores nonsense", () => {
     expect(getRouteMode(params(""))).toBe("reported")
     expect(getRouteMode(params("route=teleport"))).toBe("reported")
-    expect(getRouteMode(params("route=road"))).toBe("road")
+    expect(getRouteMode(params("route=predicted"))).toBe("predicted")
+    expect(getRouteMode(params("route=road"))).toBe("predicted") // older links
   })
 
   it("keeps the default out of the URL", () => {

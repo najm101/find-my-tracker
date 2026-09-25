@@ -10,7 +10,7 @@ import { SignInActivity } from "~/features/auth/components/sign-in-activity"
 import { TwoFactorCard } from "~/features/auth/components/two-factor-card"
 import { BeaconSettings } from "~/features/beacons/components/beacon-settings"
 import { getRouting } from "~/features/routing/api/routing"
-import { RoadRoutesCard } from "~/features/routing/components/road-routes-card"
+import { PredictedRoutesCard } from "~/features/routing/components/predicted-routes-card"
 import { getSettings } from "~/features/settings/api/settings"
 import { PollingCard } from "~/features/settings/components/polling-card"
 
@@ -61,7 +61,7 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
       </header>
       <PollingCard settings={settings} status={status} now={loadedAt} />
       <BeaconSettings beacons={beacons} />
-      <RoadRoutesCard routing={routing} now={loadedAt} />
+      <PredictedRoutesCard routing={routing} now={loadedAt} />
       <AccountCard account={account} />
 
       <section className="flex flex-col gap-6">

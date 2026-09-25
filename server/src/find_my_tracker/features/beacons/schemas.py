@@ -38,7 +38,7 @@ class BeaconOut(BaseModel):
     emoji: str | None
     color: str | None
     enabled: bool
-    vehicle: bool = Field(description="Lives in a vehicle: road routes treat it as a car.")
+    vehicle: bool = Field(description="Lives in a vehicle: predicted routes treat it as a car.")
     paired_at: datetime | None
     location_count: int
     latest: LatestLocation | None

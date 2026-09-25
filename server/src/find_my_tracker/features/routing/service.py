@@ -1,5 +1,5 @@
 """
-Road routes: which engine to use, its map data, and matching history against it.
+Predicted routes: which engine to use, its map data, and matching history against it.
 
 The engine is off, built in (this app runs Valhalla on map regions it downloads), or external (any
 Valhalla server, e.g. another container). ROUTING_URL picks an external one for good; otherwise it
@@ -9,6 +9,7 @@ is chosen in Settings.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
 import json
 import time
@@ -25,15 +26,12 @@ from find_my_tracker.core.container import Container
 from find_my_tracker.core.errors import Conflict, DomainError, NotFound
 from find_my_tracker.features.beacons.service import BeaconService
 from find_my_tracker.features.locations.service import LocationService, TimeRange
+from find_my_tracker.features.routing.jobs import MatchJob
 from find_my_tracker.features.routing.matching import (
     ALGORITHM_VERSION,
     Costing,
-    Fallback,
-    RoutedPoint,
     Trip,
-    TripResult,
     costing_for,
-    match_trip,
     split_trips,
 )
 from find_my_tracker.features.routing.repository import RouteCacheRepository
@@ -44,7 +42,7 @@ from find_my_tracker.features.routing.schemas import (
     ExternalOut,
     RegionOut,
     RegionSuggestion,
-    RoutedReport,
+    RoutesProgress,
     RoutesResponse,
     RoutesState,
     RoutingMode,
@@ -67,9 +65,8 @@ COVERAGE_CELL = 0.05
 MAX_POINTS = 50_000
 #: How long the regions history needs are remembered (unless the regions change).
 MISSING_TTL_S = 60
-#: One request matches for about this long; the rest is reported as pending.
-MATCH_BUDGET_S = 20
-PARALLEL_MATCHES = 4
+#: A view's first answer waits this long for its trips to be matched; a few quick ones make it.
+FIRST_WAIT_S = 1.0
 
 
 @dataclass(frozen=True)
@@ -162,7 +159,7 @@ class RoutingService:
                 )
                 message = str(e)
         else:
-            message = "Road routes are off."
+            message = "Predicted routes are off."
         return RoutingStatus(
             mode=cfg.mode,
             configured_by_env=cfg.from_env,
@@ -279,18 +276,19 @@ class RoutingService:
     # ---- matching ----
 
     async def routes(self, span: TimeRange, beacon_ids: Sequence[int] | None) -> RoutesResponse:
+        """The trips already matched; the rest are matched in a job whose progress is included."""
         cfg = await self.config()
         if cfg.mode is RoutingMode.OFF:
             return RoutesResponse(
                 state=RoutesState.OFF,
-                message="Road routes are off. Turn them on in Settings.",
+                message="Predicted routes are off. Turn them on in Settings.",
                 trips=[],
-                pending=0,
+                progress=None,
             )
         engine = await self._engine(cfg)
         if isinstance(engine, str):
             return RoutesResponse(
-                state=RoutesState.UNAVAILABLE, message=engine, trips=[], pending=0
+                state=RoutesState.UNAVAILABLE, message=engine, trips=[], progress=None
             )
         client, engine_key = engine
 
@@ -299,52 +297,34 @@ class RoutingService:
         )
         vehicles = await self._beacons.vehicle_ids()
         trips = split_trips(history.points, history.stays)
-        plans = [(t, costing_for(t, vehicle=t.beacon_id in vehicles)) for t in trips]
-        digests = {id(t): _digest(t, c, engine_key) for t, c in plans}
         cached = await self._cache.get_many([(t.beacon_id, t.start) for t in trips])
 
-        routes: dict[int, TripRoute] = {}
-        todo: list[tuple[Trip, Costing]] = []
-        for trip, costing in plans:
+        done: list[TripRoute] = []
+        todo: list[tuple[str, Trip, Costing]] = []
+        for trip in trips:
+            costing = costing_for(trip, vehicle=trip.beacon_id in vehicles)
+            digest = _digest(trip, costing, engine_key)
             row = cached.get((trip.beacon_id, trip.start))
-            if row and row.digest == digests[id(trip)]:
-                routes[id(trip)] = TripRoute.model_validate_json(row.body)
+            if row and row.digest == digest:
+                done.append(TripRoute.model_validate_json(row.body))
             else:
-                todo.append((trip, costing))
+                todo.append((digest, trip, costing))
+        if not todo:
+            return _answer(done, None)
 
-        deadline = time.monotonic() + MATCH_BUDGET_S
-        slots = asyncio.Semaphore(PARALLEL_MATCHES)
+        job = self._runtime.matcher.start(client, todo)
+        with contextlib.suppress(TimeoutError):
+            async with asyncio.timeout(FIRST_WAIT_S):
+                await job.settled.wait()
+        return _answer(done, job)
 
-        async def match(trip: Trip, costing: Costing) -> tuple[Trip, TripRoute] | None:
-            async with slots:
-                if time.monotonic() > deadline:
-                    return None
-                result = await match_trip(client, trip, costing)
-                return trip, _to_route(trip, costing, result)
-
-        try:
-            done = await asyncio.gather(*(match(t, c) for t, c in todo))
-        except RoutingUnavailable as e:
-            return RoutesResponse(
-                state=RoutesState.UNAVAILABLE, message=str(e), trips=[], pending=0
-            )
-        now = self._clock.timestamp()
-        for item in done:
-            if item is None:
-                continue
-            trip, route = item
-            routes[id(trip)] = route
-            if route.fallback is not Fallback.ERROR:  # a passing error is worth retrying
-                await self._cache.put(
-                    trip.beacon_id, trip.start, digests[id(trip)], route.model_dump_json(), now
-                )
-        await self._session.commit()
-        return RoutesResponse(
-            state=RoutesState.OK,
-            message=None,
-            trips=[routes[id(t)] for t in trips if id(t) in routes],
-            pending=sum(1 for item in done if item is None),
-        )
+    def job_routes(self, job_id: str, after: int) -> RoutesResponse:
+        """The trips a job has matched since the first `after`, and how far along it is."""
+        job = self._runtime.matcher.job(job_id)
+        if job is None:
+            msg = "That search for predicted routes has stopped. Load the page again."
+            raise NotFound(msg, code="routes_job_gone")
+        return _answer([], job, after)
 
     async def _engine(self, cfg: RoutingConfig) -> tuple[Valhalla, str] | str:
         """The engine to match with and a key for its road data, or why there is none."""
@@ -362,24 +342,24 @@ class RoutingService:
         return self._runtime.external(cfg.url), f"{cfg.url}:{engine.tileset_last_modified}"
 
 
-def _to_route(trip: Trip, costing: Costing, result: TripResult) -> TripRoute:
-    return TripRoute(
-        beacon_id=trip.beacon_id,
-        costing=costing,
-        geometry=[(round(lon, 6), round(lat, 6)) for lat, lon in result.geometry],
-        reports=[_report(p) for p in result.points],
-        broken_after=result.broken_after,
-        fallback=result.fallback,
-    )
-
-
-def _report(p: RoutedPoint) -> RoutedReport:
-    return RoutedReport(
-        observed_at=to_datetime(p.observed_at),  # pyright: ignore[reportArgumentType]
-        latitude=round(p.latitude, 6),
-        longitude=round(p.longitude, 6),
-        offset_m=p.offset_m,
-        off_route=p.off_route,
+def _answer(done: list[TripRoute], job: MatchJob | None, after: int = 0) -> RoutesResponse:
+    if job and job.error:
+        return RoutesResponse(
+            state=RoutesState.UNAVAILABLE, message=job.error, trips=[], progress=None
+        )
+    progress = None
+    if job and not job.settled.is_set():
+        progress = RoutesProgress(
+            job=job.id,
+            done=round(job.done, 3),
+            trips_left=job.trips_left,
+            received=len(job.routes),
+        )
+    return RoutesResponse(
+        state=RoutesState.OK,
+        message=None,
+        trips=[*done, *(job.routes[after:] if job else [])],
+        progress=progress,
     )
 
 
@@ -408,7 +388,7 @@ def _builtin_message(phase: Phase, detail: str | None, error: str | None, has_re
     if error:
         return error
     if not has_regions:
-        return "No map data yet. Add a map region in Settings → Road routes."
+        return "No map data yet. Add a map region in Settings → Predicted routes."
     return "The routing engine is starting."
 
 

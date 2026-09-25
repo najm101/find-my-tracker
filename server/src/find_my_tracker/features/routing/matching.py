@@ -25,7 +25,7 @@ from __future__ import annotations
 import math
 import statistics
 from bisect import bisect_right
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 from itertools import pairwise
@@ -75,7 +75,7 @@ class Costing(StrEnum):
 
 
 class Fallback(StrEnum):
-    """Why a trip has no road route; it is drawn as reported instead."""
+    """Why a trip has no predicted route; it is drawn as reported instead."""
 
     NO_ROADS = "no_roads"
     ERROR = "error"
@@ -303,18 +303,32 @@ def parse(response: dict[str, Any], sent: int) -> Match:
     return Match(geometry, cumulative, offsets, breaks)
 
 
-async def match_trip(client: Valhalla, trip: Trip, costing: Costing) -> TripResult:
-    """Match, drop what spoils the match, match again. See the module docstring."""
+async def match_trip(
+    client: Valhalla,
+    trip: Trip,
+    costing: Costing,
+    progress: Callable[[float], None] | None = None,
+) -> TripResult:
+    """
+    Match, drop what spoils the match, match again. See the module docstring.
+
+    `progress` hears how far along it is (0..1) after each call to Valhalla. A long trip takes up
+    to three whole matches, one after another, which is where the time goes.
+    """
     pts = list(trip.points)
     keep = list(range(len(pts)))
+    steps = _Steps(progress)
     try:
         match = await _match(client, [pts[i] for i in keep], costing)
         unmatched = {keep[j] for j, o in enumerate(match.offsets) if o is None}
-        if unmatched - _anchors(pts) and len(keep) - len(unmatched) >= 2:
+        again = bool(unmatched - _anchors(pts)) and len(keep) - len(unmatched) >= 2
+        steps.step(1, left=3 if again else 2)
+        if again:
             keep = [i for i in keep if i not in unmatched or pts[i].anchor]
             match = await _match(client, [pts[i] for i in keep], costing)
+            steps.step(1, left=2)
 
-        detours = await _detours(client, pts, keep, match, costing)
+        detours = await _detours(client, pts, keep, match, costing, steps)
         if detours:
             keep = [i for i in keep if i not in detours]
             match = await _match(client, [pts[i] for i in keep], costing)
@@ -331,8 +345,29 @@ def _anchors(pts: Sequence[TripPoint]) -> set[int]:
     return {i for i, p in enumerate(pts) if p.anchor}
 
 
+class _Steps:
+    """
+    How far a trip's matching is: the steps done, over those plus the most still to come. Which
+    steps a trip needs is only known as it goes, so each estimate assumes all of them.
+    """
+
+    def __init__(self, report: Callable[[float], None] | None) -> None:
+        self._report = report
+        self._done = 0.0
+
+    def step(self, amount: float, *, left: float) -> None:
+        self._done += amount
+        if self._report:
+            self._report(self._done / (self._done + left))
+
+
 async def _detours(
-    client: Valhalla, pts: list[TripPoint], keep: list[int], match: Match, costing: Costing
+    client: Valhalla,
+    pts: list[TripPoint],
+    keep: list[int],
+    match: Match,
+    costing: Costing,
+    steps: _Steps,
 ) -> set[int]:
     """Reports the route drives out to and back from, which a shorter route passes near anyway."""
     candidates: list[tuple[float, int]] = []
@@ -344,22 +379,31 @@ async def _detours(
             candidates.append((after - before, j))
 
     dropped: set[int] = set()
-    for _, j in sorted(candidates, reverse=True)[:MAX_CANDIDATES]:
-        before, after = match.offsets[j - 1], match.offsets[j + 1]
-        assert before is not None and after is not None
-        through = after - before
-        report, prev, nxt = pts[keep[j]], pts[keep[j - 1]], pts[keep[j + 1]]
-        try:
-            without = await _match(client, [prev, nxt], costing)
-        except MatchFailed:
-            continue
-        a, b = without.offsets
-        if a is None or b is None:
-            continue
-        reach = min(max((report.accuracy_m or NEAR_MIN_M) + BLUETOOTH_M, NEAR_MIN_M), NEAR_MAX_M)
-        if through - (b - a) > SPUR_M and distance_to_line(report, without.geometry) <= reach:
+    checks = [j for _, j in sorted(candidates, reverse=True)[:MAX_CANDIDATES]]
+    for n, j in enumerate(checks, 1):
+        if await _is_spur(client, pts, keep, match, costing, j):
             dropped.add(keep[j])
+        # All the checks together count as one step; the match without the spurs is the last.
+        steps.step(1 / len(checks), left=1 + (len(checks) - n) / len(checks))
     return dropped
+
+
+async def _is_spur(
+    client: Valhalla, pts: list[TripPoint], keep: list[int], match: Match, costing: Costing, j: int
+) -> bool:
+    before, after = match.offsets[j - 1], match.offsets[j + 1]
+    assert before is not None and after is not None
+    through = after - before
+    report, prev, nxt = pts[keep[j]], pts[keep[j - 1]], pts[keep[j + 1]]
+    try:
+        without = await _match(client, [prev, nxt], costing)
+    except MatchFailed:
+        return False
+    a, b = without.offsets
+    if a is None or b is None:
+        return False
+    reach = min(max((report.accuracy_m or NEAR_MIN_M) + BLUETOOTH_M, NEAR_MIN_M), NEAR_MAX_M)
+    return through - (b - a) > SPUR_M and distance_to_line(report, without.geometry) <= reach
 
 
 def _retraces(match: Match, before: float, here: float, after: float) -> bool:

@@ -56,12 +56,14 @@ export function withShowNoise(
   return next
 }
 
-/** How history's path is drawn: as reported, snapped to roads, or both on top of each other. */
-export type RouteMode = "reported" | "both" | "road"
+/** How history's path is drawn: as reported, as predicted routes, or both on top of each other. */
+export type RouteMode = "reported" | "both" | "predicted"
 
 export function getRouteMode(params: URLSearchParams): RouteMode {
   const value = params.get("route")
-  return value === "both" || value === "road" ? value : "reported"
+  if (value === "both") return value
+  // "road": links saved when predicted routes were called road routes.
+  return value === "predicted" || value === "road" ? "predicted" : "reported"
 }
 
 export function withRouteMode(

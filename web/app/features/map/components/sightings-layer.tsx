@@ -3,12 +3,12 @@ import { useEffect, useId, useMemo, useRef } from "react"
 
 import { useMap } from "~/components/ui/map"
 import type { Schemas } from "~/lib/api/client"
-import { reportKey } from "~/lib/road-routes"
+import { reportKey } from "~/lib/predicted-routes"
 
 type Point = Schemas["LocationPoint"]
 
 /**
- * Every sighting as a small dot, coloured per beacon; noisy ones faint, and ones a road route left
+ * Every sighting as a small dot, coloured per beacon; noisy ones faint, and ones a predicted route left
  * off the route hollow. A single circle layer, because thousands of DOM markers would be far too
  * slow. Dots are clickable when `onPick` is set.
  */
@@ -23,7 +23,7 @@ export function SightingsLayer({
   colors: Map<number, string>
   /** Draw every dot faint, as the backdrop to a playback. */
   faded?: boolean
-  /** `reportKey`s of reports off the likely route. */
+  /** `reportKey`s of reports off the predicted route. */
   offRoute?: Set<string>
   onPick?: (point: Point) => void
 }) {

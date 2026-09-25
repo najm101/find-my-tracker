@@ -96,8 +96,11 @@ def test_parse_marks_unmatched_and_breaks() -> None:
 
 def test_a_report_nowhere_near_a_road_is_dropped_and_the_trip_matched_again() -> None:
     client = Replay(fixture("far"), fixture("clean"))
-    result = asyncio.run(m.match_trip(client, trip(FAR), m.Costing.AUTO))
+    heard: list[float] = []
+    result = asyncio.run(m.match_trip(client, trip(FAR), m.Costing.AUTO, heard.append))
     assert result.fallback is None
+    # After each whole match and each of the two checks, assuming a last match may still come.
+    assert heard == [0.25, 0.5, 0.625, 0.75]
     assert [p.off_route for p in result.points] == [False, False, True, False, False, False]
     assert len(client.requests[1]["shape"]) == 5  # matched again without it
     assert result.broken_after == []
@@ -160,8 +163,10 @@ def test_a_spur_to_a_stray_report_is_cut() -> None:
     without = answer([main[2], main[3]], [main[2], main[3]])
     again = answer([main[1], main[2], main[3], main[4]], main[1:5])
     client = Replay(first, without, again)
-    result = asyncio.run(m.match_trip(client, trip(reports), m.Costing.AUTO))
+    heard: list[float] = []
+    result = asyncio.run(m.match_trip(client, trip(reports), m.Costing.AUTO, heard.append))
     assert [p.off_route for p in result.points] == [False, False, True, False, False]
+    assert heard == [1 / 3, 2 / 3]  # the first match, then the one check; the last is the end
 
 
 def test_a_real_side_trip_is_kept() -> None:
