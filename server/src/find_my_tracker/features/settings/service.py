@@ -4,6 +4,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from find_my_tracker.core.errors import NotFound
 from find_my_tracker.features.settings.repository import SettingsRepository
 from find_my_tracker.features.settings.schemas import (
     MAX_POLL_MINUTES,
@@ -33,6 +34,11 @@ class SettingsService:
     async def put_values(self, values: dict[str, Any]) -> None:
         """Stores another feature's values. Does not commit."""
         await self._repo.put(values)
+
+    async def require_api_docs(self) -> None:
+        if not (await self.get()).api_docs:
+            msg = "The API documentation is off. Turn it on in Settings → API."
+            raise NotFound(msg, code="api_docs_off")
 
     async def update(self, patch: SettingsUpdate) -> AppSettings:
         changes = patch.model_dump(exclude_none=True)

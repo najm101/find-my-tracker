@@ -1,13 +1,39 @@
+import { readFileSync } from "node:fs"
+import { createRequire } from "node:module"
+
 import { reactRouter } from "@react-router/dev/vite"
 import tailwindcss from "@tailwindcss/vite"
-import { defineConfig } from "vite"
+import { type Plugin, defineConfig } from "vite"
 import babel from "vite-plugin-babel"
+
+const require = createRequire(import.meta.url)
+
+/**
+ * Swagger UI for the API documentation page the server renders at /api/docs (when it's turned on
+ * in Settings). Copied into the build so the page loads nothing from a CDN.
+ */
+function apiDocsAssets(): Plugin {
+  return {
+    name: "api-docs-assets",
+    apply: "build",
+    applyToEnvironment: (environment) => environment.name === "client",
+    generateBundle() {
+      for (const file of ["swagger-ui-bundle.js", "swagger-ui.css"])
+        this.emitFile({
+          type: "asset",
+          fileName: `api-docs/${file}`,
+          source: readFileSync(require.resolve(`swagger-ui-dist/${file}`)),
+        })
+    },
+  }
+}
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [
     tailwindcss(),
     reactRouter(),
+    apiDocsAssets(),
     // React Compiler. The `react-hooks` lint rules already hold the code to its rules
     // (no Date.now() in render, and so on); this is what actually applies the memoization,
     // so components and derived values don't need useMemo/useCallback by hand.

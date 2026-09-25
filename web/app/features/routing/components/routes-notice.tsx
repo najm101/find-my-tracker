@@ -41,7 +41,7 @@ export function RoutesNotice({
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <Button asChild size="sm" variant="outline">
-              <Link to="/settings#predicted-routes">
+              <Link to="/settings/predicted-routes">
                 {off ? "Set up" : "Settings"}
               </Link>
             </Button>
@@ -66,7 +66,7 @@ export function RoutesNotice({
       >
         {noRoads} trip{noRoads === 1 ? " has" : "s have"} no roads nearby in the
         map data, so {noRoads === 1 ? "it's" : "they're"} drawn as reported.{" "}
-        <Link to="/settings#predicted-routes" className="underline">
+        <Link to="/settings/predicted-routes" className="underline">
           Map data
         </Link>
       </p>

@@ -162,14 +162,5 @@ def test_the_served_page_carries_hashes_for_its_own_scripts(
 
 
 @pytest.mark.parametrize("path", ["/docs", "/redoc", "/openapi.json"])
-def test_api_docs_are_off_by_default(client: TestClient, path: str) -> None:
+def test_there_are_no_public_api_docs(client: TestClient, path: str) -> None:
     assert client.get(path).status_code == 404
-
-
-@pytest.mark.parametrize("path", ["/docs", "/openapi.json"])
-def test_api_docs_can_be_turned_on(
-    settings: Settings, apple: FakeAppleClientFactory, path: str
-) -> None:
-    opened = settings.model_copy(update={"expose_api_docs": True})
-    for c in app_with(opened, apple):
-        assert c.get(path).status_code == 200

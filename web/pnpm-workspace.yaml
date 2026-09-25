@@ -1,6 +1,8 @@
 packages: []
 
 allowBuilds:
+  # swagger-ui-dist's install-time usage analytics: not wanted.
+  '@scarf/scarf': false
   esbuild: true
   msw: false
   # Prebuilt binaries arrive via optional dependencies; the postinstall is only a fallback.

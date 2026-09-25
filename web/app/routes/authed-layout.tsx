@@ -63,8 +63,12 @@ import { getHidden, withHiddenToggled } from "~/lib/search-params"
 
 import type { Route } from "./+types/authed-layout"
 
-/** Pages that replace the map instead of drawing on it. */
-const OFF_MAP = new Set(["/setup", "/settings", "/status"])
+/** Pages that replace the map instead of drawing on it (and the pages under them). */
+const OFF_MAP = ["/setup", "/settings", "/status"]
+
+function offMap(path: string): boolean {
+  return OFF_MAP.some((p) => path === p || path.startsWith(`${p}/`))
+}
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   if (!(await isAuthenticated())) throw redirect("/login")
@@ -72,7 +76,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const path = new URL(request.url).pathname
   // Without an account there is nothing to show but the wizard — except settings, which
   // is where the "connect an account" button lives.
-  if (account.status === "none" && !OFF_MAP.has(path)) throw redirect("/setup")
+  if (account.status === "none" && !offMap(path)) throw redirect("/setup")
   const [beacons, status] = await Promise.all([
     listBeacons(),
     getTrackingStatus(),
@@ -125,7 +129,7 @@ export default function AuthedLayout({ loaderData }: Route.ComponentProps) {
   const hidden = getHidden(params)
   const activeId =
     Number(location.pathname.match(/^\/beacons\/(\d+)/)?.[1]) || null
-  const onMap = !OFF_MAP.has(location.pathname)
+  const onMap = !offMap(location.pathname)
   const connected = account.status !== "none"
   const [panelSlot, setPanelSlot] = useState<HTMLElement | null>(null)
   const isMobile = useIsMobile()

@@ -82,6 +82,12 @@
       "AppSettings": {
         "description": "User-editable settings. Defaults apply until changed.",
         "properties": {
+          "api_docs": {
+            "default": false,
+            "description": "Serve the API documentation at /api/docs, to the signed-in admin only.",
+            "title": "Api Docs",
+            "type": "boolean"
+          },
           "poll_interval_minutes": {
             "default": 30,
             "description": "Minutes between checks: 30 minutes to 7 days.",
@@ -1482,6 +1488,17 @@
       },
       "SettingsUpdate": {
         "properties": {
+          "api_docs": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Docs"
+          },
           "poll_interval_minutes": {
             "anyOf": [
               {

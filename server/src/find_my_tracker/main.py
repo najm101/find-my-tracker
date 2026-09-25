@@ -31,6 +31,7 @@ from find_my_tracker.features.routing.router import router as routing_router
 from find_my_tracker.features.routing.runtime import RoutingRuntime
 from find_my_tracker.features.routing.schemas import RoutingMode
 from find_my_tracker.features.routing.service import RoutingService
+from find_my_tracker.features.settings.router import docs_router
 from find_my_tracker.features.settings.router import router as settings_router
 from find_my_tracker.features.tracking.poller import STARTUP_DELAY_SECONDS, Poller
 from find_my_tracker.features.tracking.router import router as tracking_router
@@ -139,13 +140,14 @@ def create_app(settings: Settings | None = None, container: Container | None = N
             await container.wizards.discard()
             await container.db.dispose()
 
-    docs = settings.expose_api_docs
+    # The API documentation is only for the signed-in admin, and only while Settings says so:
+    # /api/docs (features/settings). A public /docs would be a map of the API for anyone.
     app = FastAPI(
         title="Find My Tracker",
         lifespan=lifespan,
-        docs_url="/docs" if docs else None,
-        redoc_url="/redoc" if docs else None,
-        openapi_url="/openapi.json" if docs else None,
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
     )
     app.state.container = container
     install_error_handlers(app)
@@ -160,6 +162,7 @@ def create_app(settings: Settings | None = None, container: Container | None = N
         locations_router,
         tracking_router,
         settings_router,
+        docs_router,
         routing_router,
     ):
         api.include_router(router)

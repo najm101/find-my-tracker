@@ -36,10 +36,20 @@ def inline_script_hashes(index: Path) -> list[str]:
         html = index.read_text(encoding="utf-8")
     except OSError:  # pragma: no cover - no SPA build, e.g. the API-only test app
         return []
+    return script_hashes(html)
+
+
+def script_hashes(html: str) -> list[str]:
+    """`'sha256-...'` sources for every inline script in a page."""
     return [
         f"'sha256-{base64.b64encode(hashlib.sha256(body.encode()).digest()).decode()}'"
         for body in (m.group(1) for m in _INLINE_SCRIPT.finditer(html))
     ]
+
+
+def page_csp(html: str) -> str:
+    """The policy for a page the server renders itself (the API docs): its own inline scripts."""
+    return build_csp(script_hashes=script_hashes(html), extra_sources=[])
 
 
 def build_csp(*, script_hashes: Iterable[str], extra_sources: Iterable[str]) -> str:

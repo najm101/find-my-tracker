@@ -57,9 +57,6 @@ class Settings(BaseSettings):
     allowed_hosts: str | None = None
     # Extra origins the browser may load map tiles and fonts from, comma-separated.
     extra_csp_sources: str | None = None
-    # Serve /docs, /redoc and /openapi.json. Off by default: it is a map of the API for anyone
-    # who finds the address.
-    expose_api_docs: bool = False
 
     # ---- predicted routes (see README: "Predicted routes") ----
     # A Valhalla server to snap history to roads, e.g. http://valhalla:8002 for a container next to

@@ -733,6 +733,12 @@ export interface components {
      */
     AppSettings: {
       /**
+       * Api Docs
+       * @description Serve the API documentation at /api/docs, to the signed-in admin only.
+       * @default false
+       */
+      api_docs: boolean
+      /**
        * Poll Interval Minutes
        * @description Minutes between checks: 30 minutes to 7 days.
        * @default 30
@@ -1253,6 +1259,8 @@ export interface components {
     }
     /** SettingsUpdate */
     SettingsUpdate: {
+      /** Api Docs */
+      api_docs?: boolean | null
       /** Poll Interval Minutes */
       poll_interval_minutes?: number | null
     }

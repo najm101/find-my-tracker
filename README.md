@@ -195,7 +195,6 @@ These only matter once something outside your network can reach the dashboard:
 | `TRUSTED_PROXIES` | `127.0.0.1,::1` | Whose `X-Forwarded-For` and `-Proto` to believe. A proxy in another container is not `127.0.0.1`, and without this every visitor shares one login rate-limit bucket. Your proxy's address, or `*` when nothing else can reach the app's port |
 | `ALLOWED_HOSTS` | any | Comma-separated host names to answer to. Anything else gets a 400 |
 | `COOKIE_SAMESITE` | `strict` | `lax` if following a link to the dashboard from another site should keep you signed in. `strict` is the safer default |
-| `EXPOSE_API_DOCS` | `false` | Serve `/docs`, `/redoc` and `/openapi.json`. Off by default: it is a map of the API for anyone who finds the address |
 | `EXTRA_CSP_SOURCES` | | Extra origins the browser may load map tiles from, comma-separated |
 
 Everything lives in the mounted `data/` folder (`tracker.db` plus an anisette cache): back it up

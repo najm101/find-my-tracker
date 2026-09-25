@@ -166,7 +166,7 @@ describe("RoutesNotice", () => {
     ).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Set up" })).toHaveAttribute(
       "href",
-      "/settings#predicted-routes"
+      "/settings/predicted-routes"
     )
     expect(screen.getByRole("link", { name: /guide/i })).toHaveAttribute(
       "href",

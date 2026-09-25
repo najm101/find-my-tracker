@@ -19,9 +19,14 @@ class AppSettings(BaseModel):
         le=MAX_POLL_MINUTES,
         description="Minutes between checks: 30 minutes to 7 days.",
     )
+    api_docs: bool = Field(
+        default=False,
+        description="Serve the API documentation at /api/docs, to the signed-in admin only.",
+    )
 
 
 class SettingsUpdate(BaseModel):
     poll_interval_minutes: int | None = Field(
         default=None, ge=MIN_POLL_MINUTES, le=MAX_POLL_MINUTES
     )
+    api_docs: bool | None = None
