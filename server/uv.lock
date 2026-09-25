@@ -494,7 +494,7 @@ wheels = [
 
 [[package]]
 name = "find-my-tracker"
-version = "0.7.1"
+version = "0.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
